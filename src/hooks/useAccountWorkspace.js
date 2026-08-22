@@ -84,12 +84,18 @@ async function saveWorkspace(workspace) {
 
 export function useAccountWorkspace(initialData) {
   const legacyStore = useMemo(() => normalizeStore(readJson(LEGACY_STORE_KEY, null), initialData), [initialData]);
+  const hasLegacyWorkspace = useMemo(
+    () => Boolean(readJson(LEGACY_STORE_KEY, null) || readJson(LEGACY_DATA_KEY, null)),
+    [],
+  );
   const [store, setStore] = useState(legacyStore);
   const [identity, setIdentity] = useState(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [syncStatus, setSyncStatus] = useState('loading');
   const [syncError, setSyncError] = useState('');
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
   const [storageError, setStorageError] = useState('');
+  const [needsAccountSetup, setNeedsAccountSetup] = useState(false);
   const identityRef = useRef(null);
   const lastSavedRef = useRef('');
   const saveQueueRef = useRef(Promise.resolve());
@@ -117,11 +123,13 @@ export function useAccountWorkspace(initialData) {
           await saveWorkspace(nextStore);
         } else {
           const claimedBy = localStorage.getItem(LEGACY_CLAIM_KEY);
+          const isNewWorkspace = !hasLegacyWorkspace || Boolean(claimedBy && claimedBy !== user.id);
           nextStore = !claimedBy || claimedBy === user.id
             ? legacyStore
             : normalizeStore(null, initialData);
           await saveWorkspace(nextStore);
           localStorage.setItem(LEGACY_CLAIM_KEY, user.id);
+          setNeedsAccountSetup(isNewWorkspace);
         }
 
         if (!mounted) return;
@@ -133,6 +141,7 @@ export function useAccountWorkspace(initialData) {
         localStorage.setItem(userCacheKey, serialized);
         setIsHydrated(true);
         setSyncStatus('synced');
+        setLastSyncedAt(result.updatedAt || new Date().toISOString());
       } catch (error) {
         if (!mounted) return;
         setSyncStatus(error.status === 401 ? 'unauthorized' : 'error');
@@ -141,7 +150,7 @@ export function useAccountWorkspace(initialData) {
     };
     hydrate();
     return () => { mounted = false; };
-  }, [initialData, legacyStore]);
+  }, [hasLegacyWorkspace, initialData, legacyStore]);
 
   useEffect(() => {
     if (!isHydrated || !identityRef.current) return;
@@ -158,8 +167,9 @@ export function useAccountWorkspace(initialData) {
     const timer = window.setTimeout(() => {
       const snapshot = store;
       saveQueueRef.current = saveQueueRef.current.then(async () => {
-        await saveWorkspace(snapshot);
+        const result = await saveWorkspace(snapshot);
         lastSavedRef.current = serialized;
+        setLastSyncedAt(result.updatedAt || new Date().toISOString());
         if (JSON.stringify(storeRef.current) === serialized) {
           setSyncStatus('synced');
           setSyncError('');
@@ -202,7 +212,17 @@ export function useAccountWorkspace(initialData) {
       createdAt: new Date().toISOString(),
       data,
     };
-    setStore(current => ({ ...current, activeAccountId: id, accounts: [...current.accounts, account] }));
+    setStore(current => {
+      const replacePlaceholder = needsAccountSetup
+        && current.accounts.length === 1
+        && current.accounts[0].id === 'primary';
+      return {
+        ...current,
+        activeAccountId: id,
+        accounts: replacePlaceholder ? [account] : [...current.accounts, account],
+      };
+    });
+    setNeedsAccountSetup(false);
     return id;
   };
 
@@ -221,6 +241,24 @@ export function useAccountWorkspace(initialData) {
     };
   });
 
+  const syncNow = async () => {
+    const snapshot = storeRef.current;
+    const serialized = JSON.stringify(snapshot);
+    setSyncStatus('saving');
+    setSyncError('');
+    try {
+      const result = await saveWorkspace(snapshot);
+      lastSavedRef.current = serialized;
+      setLastSyncedAt(result.updatedAt || new Date().toISOString());
+      setSyncStatus('synced');
+      return true;
+    } catch (error) {
+      setSyncStatus(error.status === 401 ? 'unauthorized' : 'error');
+      setSyncError(error.message || 'Manual D1 sync failed.');
+      return false;
+    }
+  };
+
   return {
     accounts: store.accounts,
     activeAccount,
@@ -233,7 +271,10 @@ export function useAccountWorkspace(initialData) {
     identity,
     isHydrated,
     syncStatus,
+    lastSyncedAt,
+    syncNow,
     syncError,
     storageError,
+    needsAccountSetup,
   };
 }
