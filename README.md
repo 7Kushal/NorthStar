@@ -45,7 +45,10 @@ sign-up flow.
 4. Select Cloudflare as the only login method for the application.
 
 The Worker trusts only the identity verified by `ctx.access`. Local Vite
-development uses a clearly labelled local-development identity.
+development uses a clearly labelled local-development identity. Cloudflare
+handles authentication before NorthStar loads; the app itself has no sign-in
+or sign-up page. After authentication, NorthStar displays a personalized
+welcome screen before opening the workspace.
 
 ## Data persistence
 
