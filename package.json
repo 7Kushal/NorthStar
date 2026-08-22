@@ -1,6 +1,7 @@
 {
   "name": "northstar-trading-manager",
   "private": true,
+  "type": "module",
   "version": "1.0.0",
   "scripts": {
     "start": "vite --host 127.0.0.1 --port 4173",
