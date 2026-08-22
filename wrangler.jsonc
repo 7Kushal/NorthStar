@@ -2,12 +2,6 @@
   "name": "northstar",
   "compatibility_date": "2026-08-22",
   "main": "./worker/index.js",
-  "access": {
-    "dev": {
-      "aud": "northstar-local",
-      "identity": { "email": "local@northstar.dev" }
-    }
-  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
