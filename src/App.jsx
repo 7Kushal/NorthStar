@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { useLocalState } from './hooks/useLocalState';
 import { useAccountWorkspace } from './hooks/useAccountWorkspace';
-import { useAccessSession } from './hooks/useAccessSession';
 import { useMarket } from './hooks/useMarket';
 import { useEconomicCalendar } from './hooks/useEconomicCalendar';
 
@@ -66,21 +65,15 @@ const updateStoredCheckinStatus = (id, status, accountId) => {
   }
 };
 
-function AccessLoading() {
-  return <main className="access-screen"><div className="access-card"><div className="access-brand"><Sparkles size={19} /></div><p>SECURE WORKSPACE</p><h1>Confirming your session</h1><span>NorthStar is checking your Cloudflare Access identity.</span><RefreshCw className="spinning" size={20} /></div></main>;
-}
-
-function WelcomeScreen({ identity, account, accountCount, onEnter }) {
+function WelcomeScreen({ account, accountCount, onEnter }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const firstName = (identity.name || identity.email || 'Trader').split(/[\s@]+/)[0];
-  return <main className="welcome-screen"><section className="welcome-card"><div className="welcome-top"><div className="welcome-brand"><Sparkles size={20} /></div>{!identity.local && <a href="/cdn-cgi/access/logout">Sign out <ExternalLink size={13} /></a>}</div><div className="welcome-status"><span /> Cloudflare session verified</div><p>WELCOME TO NORTHSTAR</p><h1>{greeting}, {firstName}.</h1><span>Your trading workspace is ready. Continue with <b>{account.name}</b>, or switch accounts from the navigation after entering.</span><div className="welcome-summary"><article><small>ACTIVE ACCOUNT</small><b>{account.name}</b><span>{account.broker} · {account.type}</span></article><article><small>WORKSPACES</small><b>{accountCount}</b><span>Independent trading account{accountCount === 1 ? '' : 's'}</span></article></div><button className="primary-button welcome-enter" onClick={onEnter}>Enter NorthStar <ArrowUpRight size={17} /></button><small className="welcome-security"><ShieldCheck size={13} /> Identity verified by Cloudflare Access · No NorthStar sign-up required</small></section></main>;
+  return <main className="welcome-screen"><section className="welcome-card"><div className="welcome-top"><div className="welcome-brand"><Sparkles size={20} /></div></div><div className="welcome-status"><span /> Workspace ready</div><p>WELCOME TO NORTHSTAR</p><h1>{greeting}, Trader.</h1><span>Your trading workspace is ready. Continue with <b>{account.name}</b>, or switch accounts from the navigation after entering.</span><div className="welcome-summary"><article><small>ACTIVE ACCOUNT</small><b>{account.name}</b><span>{account.broker} · {account.type}</span></article><article><small>WORKSPACES</small><b>{accountCount}</b><span>Independent trading account{accountCount === 1 ? '' : 's'}</span></article></div><button className="primary-button welcome-enter" onClick={onEnter}>Enter NorthStar <ArrowUpRight size={17} /></button><small className="welcome-security"><ShieldCheck size={13} /> Public access · Your workspace data stays in this browser</small></section></main>;
 }
 
 export default function App() {
   const workspace = useAccountWorkspace(INITIAL);
   const { accounts, activeAccount, data, setData, switchAccount, createAccount, deleteAccount } = workspace;
-  const identity = useAccessSession();
   const [page, setPage] = useState('dashboard');
   const [symbol, setSymbol] = useState('BTCUSD');
   const [timeframe, setTimeframe] = useState('M5');
@@ -140,12 +133,10 @@ export default function App() {
     document.documentElement.style.colorScheme = theme;
   }, [theme]);
 
-  if (identity.loading) return <AccessLoading />;
-  if (!identity.authenticated) return <AccessLoading />;
-  if (!workspaceEntered) return <WelcomeScreen identity={identity} account={activeAccount} accountCount={accounts.length} onEnter={() => { sessionStorage.setItem('northstar-workspace-entered', 'true'); setWorkspaceEntered(true); }} />;
+  if (!workspaceEntered) return <WelcomeScreen account={activeAccount} accountCount={accounts.length} onEnter={() => { sessionStorage.setItem('northstar-workspace-entered', 'true'); setWorkspaceEntered(true); }} />;
 
   return <div className={`app-shell theme-${theme} ${navCollapsed ? 'nav-collapsed' : ''}`}>
-    <Sidebar page={page} go={go} open={mobileNav} accounts={accounts} activeAccount={activeAccount} onSwitchAccount={selectAccount} onAddAccount={() => setAccountModal(true)} onDeleteAccount={deleteAccount} identity={identity} />
+    <Sidebar page={page} go={go} open={mobileNav} accounts={accounts} activeAccount={activeAccount} onSwitchAccount={selectAccount} onAddAccount={() => setAccountModal(true)} onDeleteAccount={deleteAccount} />
     <main className="main-shell">
       <Topbar page={page} onMenu={toggleNavigation} onNewTrade={() => openTrade()} theme={theme} onTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} navCollapsed={navCollapsed} data={data} totalPnl={totalPnl} todayPnl={todayPnl} market={market} symbol={symbol} activeAccount={activeAccount} />
       <div className="account-workspace" key={activeAccount.id}>
@@ -156,7 +147,7 @@ export default function App() {
         {page === 'calendar' && <EconomicCalendar />}
         {page === 'premarket' && <Premarket routine={data.routine} activePlan={activePlan} patch={patch} go={go} />}
         {page === 'plans' && <Plans plans={data.plans} patch={patch} onAdd={() => setPlanModal(true)} />}
-        {page === 'settings' && <RiskSettings settings={data.settings} patch={patch} account={activeAccount} identity={identity} />}
+        {page === 'settings' && <RiskSettings settings={data.settings} patch={patch} account={activeAccount} />}
       </div>
     </main>
     {mobileNav && <button className="nav-scrim" onClick={() => setMobileNav(false)} aria-label="Close navigation" />}
@@ -174,9 +165,8 @@ export default function App() {
   </div>;
 }
 
-function Sidebar({ page, go, open, accounts, activeAccount, onSwitchAccount, onAddAccount, onDeleteAccount, identity }) {
+function Sidebar({ page, go, open, accounts, activeAccount, onSwitchAccount, onAddAccount, onDeleteAccount }) {
   const [accountMenu, setAccountMenu] = useState(false);
-  const initials = (identity.name || identity.email || 'NS').split(/[\s@]+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase();
   return <aside className={`sidebar ${open ? 'open' : ''}`}>
     <div className="logo"><span><Sparkles size={17} /></span><div>northstar<small>TRADING INTELLIGENCE</small></div></div>
     <div className="nav-label">Workspace</div>
@@ -196,7 +186,7 @@ function Sidebar({ page, go, open, accounts, activeAccount, onSwitchAccount, onA
         <button className="account-add" onClick={() => { setAccountMenu(false); onAddAccount(); }}><Plus size={14} /> Create trading account</button>
       </div>}
     </div>
-    <div className="user-card"><span>{initials}</span><div><b>{identity.name || 'Signed in'}</b><small>{identity.local ? 'Local development' : identity.email}</small></div>{!identity.local && <a href="/cdn-cgi/access/logout" onClick={() => sessionStorage.removeItem('northstar-workspace-entered')} aria-label="Sign out" title="Sign out"><ExternalLink size={14} /></a>}</div>
+    <div className="user-card"><span>NS</span><div><b>NorthStar Trader</b><small>Browser-local workspace</small></div></div>
   </aside>;
 }
 
@@ -488,10 +478,9 @@ function Plans({ plans, patch, onAdd }) {
   return <div className="page-stack"><div className="page-intro"><div><p>STRATEGY LIBRARY</p><h2>Turn your edge into a repeatable system.</h2><span>Keep entry criteria visible before and during execution.</span></div><button className="primary-button" onClick={onAdd}><Plus size={16} /> New playbook</button></div>{plans.length ? <div className="plan-grid">{plans.map(plan => <article className={`surface plan-card ${plan.active ? 'active' : ''}`} key={plan.id}><div className="plan-top"><span>{plan.active ? '● ACTIVE PLAYBOOK' : 'PLAYBOOK'}</span><Target size={18} /></div><h2>{plan.name}</h2><p>{plan.market || 'All connected markets'}</p><ul>{plan.rules.map(rule => <li key={rule}><Check size={13} />{rule}</li>)}</ul><footer><button onClick={() => patch(next => next.plans.forEach(p => p.active = p.id === plan.id))}>{plan.active ? 'Currently active' : 'Set active'}</button><button className="icon-danger" onClick={() => patch(next => next.plans = next.plans.filter(p => p.id !== plan.id))}><Trash2 size={14} /></button></footer></article>)}</div> : <EmptyState large icon={Target} title="Build your first playbook" text="Define your setup, market and entry criteria. Nothing is pre-filled or fabricated." action="Create playbook" onAction={onAdd} />}</div>;
 }
 
-function RiskSettings({ settings, patch, account, identity }) {
+function RiskSettings({ settings, patch, account }) {
   const [form, setForm] = useState(settings), save = e => { e.preventDefault(); patch(next => next.settings = { ...form }); };
-  const logout = () => { sessionStorage.removeItem('northstar-workspace-entered'); window.location.assign('/cdn-cgi/access/logout'); };
-  return <div className="settings-layout"><section className="surface settings-copy"><div className="settings-icon"><ShieldCheck size={22} /></div><p>RISK GOVERNANCE · {account.name}</p><h2>Rules that protect you before the click.</h2><span>These controls apply only to {account.name}. Switching accounts loads that account's own limits, journal and analytics.</span><div className="settings-note"><Sparkles size={16} /><div><b>Discipline by design</b><small>Guardrails are most useful when decided before the session.</small></div></div></section><form className="surface settings-form" onSubmit={save}><SectionTitle eyebrow="ACCOUNT LIMITS" title={`${account.name} controls`} /><div className="settings-grid"><Field label="Starting account balance"><NumberField value={form.startingBalance} onChange={value => setForm({ ...form, startingBalance: value })} prefix="$" /></Field><Field label="Maximum daily loss"><NumberField value={form.maxDailyLoss} onChange={value => setForm({ ...form, maxDailyLoss: value })} prefix="$" /></Field><Field label="Maximum trades per day"><NumberField value={form.maxTrades} onChange={value => setForm({ ...form, maxTrades: value })} /></Field><Field label="Default risk per trade"><NumberField value={form.riskPerTrade} onChange={value => setForm({ ...form, riskPerTrade: value })} prefix="$" /></Field></div><button className="primary-button save-settings">Save controls</button></form><section className="surface access-settings"><div><span><ShieldCheck size={17} /></span><div><p>SECURE SESSION</p><h3>Cloudflare Access</h3><small>{identity.local ? 'Authentication is simulated during local development.' : `Signed in as ${identity.email}`}</small></div></div><button type="button" className="logout-button" onClick={logout} disabled={identity.local}>Log out of Cloudflare Access <ExternalLink size={14} /></button></section></div>;
+  return <div className="settings-layout"><section className="surface settings-copy"><div className="settings-icon"><ShieldCheck size={22} /></div><p>RISK GOVERNANCE · {account.name}</p><h2>Rules that protect you before the click.</h2><span>These controls apply only to {account.name}. Switching accounts loads that account's own limits, journal and analytics.</span><div className="settings-note"><Sparkles size={16} /><div><b>Discipline by design</b><small>Guardrails are most useful when decided before the session.</small></div></div></section><form className="surface settings-form" onSubmit={save}><SectionTitle eyebrow="ACCOUNT LIMITS" title={`${account.name} controls`} /><div className="settings-grid"><Field label="Starting account balance"><NumberField value={form.startingBalance} onChange={value => setForm({ ...form, startingBalance: value })} prefix="$" /></Field><Field label="Maximum daily loss"><NumberField value={form.maxDailyLoss} onChange={value => setForm({ ...form, maxDailyLoss: value })} prefix="$" /></Field><Field label="Maximum trades per day"><NumberField value={form.maxTrades} onChange={value => setForm({ ...form, maxTrades: value })} /></Field><Field label="Default risk per trade"><NumberField value={form.riskPerTrade} onChange={value => setForm({ ...form, riskPerTrade: value })} prefix="$" /></Field></div><button className="primary-button save-settings">Save controls</button></form><section className="surface access-settings"><div><span><ShieldCheck size={17} /></span><div><p>DATA STORAGE</p><h3>Browser-local workspace</h3><small>Authentication is disabled. Journal and account data remain in this browser's local storage.</small></div></div></section></div>;
 }
 
 function TradeModal({ plans, initialDate, onClose, onSave }) {
