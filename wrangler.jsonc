@@ -17,6 +17,10 @@
       "migrations_dir": "./migrations"
     }
   ],
+  "vars": {
+    "TEAM_DOMAIN": "https://jangidkushal1998.cloudflareaccess.com",
+    "POLICY_AUD": "e592244e6064e8d6d3bde0db1310adb30f96695aa803f09214528bd39250feea"
+  },
   "access": {
     "dev": {
       "aud": "edgetrader-local",

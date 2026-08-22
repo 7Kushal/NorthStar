@@ -1,3 +1,5 @@
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+
 const FOREX_FACTORY_FEED = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
 const MAX_WORKSPACE_BYTES = 4_500_000;
 
@@ -29,18 +31,46 @@ async function getEconomicCalendar() {
   }
 }
 
-async function accessUser(context) {
-  if (!context.access) return null;
+function normalizedUser(identity) {
+  const email = String(identity?.email || '').trim().toLowerCase();
+  if (!email) return null;
+  return {
+    id: String(identity.user_uuid || identity.id || identity.sub || email),
+    email,
+    name: String(identity.name || identity.givenName || email.split('@')[0]),
+  };
+}
+
+async function accessUser(request, env, context) {
+  if (context.access) {
+    try {
+      const user = normalizedUser(await context.access.getIdentity());
+      if (user) return user;
+    } catch (error) {
+      console.error(JSON.stringify({
+        message: 'Cloudflare Access context identity lookup failed',
+        error: error instanceof Error ? error.message : String(error),
+      }));
+    }
+  }
+
+  const token = request.headers.get('cf-access-jwt-assertion');
+  if (!token || !env.TEAM_DOMAIN || !env.POLICY_AUD) return null;
+
   try {
-    const identity = await context.access.getIdentity();
-    const email = String(identity?.email || '').trim().toLowerCase();
-    if (!email) return null;
-    return {
-      id: String(identity.user_uuid || identity.id || identity.sub || email),
-      email,
-      name: String(identity.name || identity.givenName || email.split('@')[0]),
-    };
-  } catch {
+    const jwks = createRemoteJWKSet(
+      new URL(`${env.TEAM_DOMAIN.replace(/\/$/, '')}/cdn-cgi/access/certs`),
+    );
+    const { payload } = await jwtVerify(token, jwks, {
+      issuer: env.TEAM_DOMAIN.replace(/\/$/, ''),
+      audience: env.POLICY_AUD,
+    });
+    return normalizedUser(payload);
+  } catch (error) {
+    console.error(JSON.stringify({
+      message: 'Cloudflare Access JWT verification failed',
+      error: error instanceof Error ? error.message : String(error),
+    }));
     return null;
   }
 }
@@ -137,7 +167,7 @@ export default {
     }
 
     if (url.pathname === '/api/session' || url.pathname === '/api/workspace') {
-      const user = await accessUser(context);
+      const user = await accessUser(request, env, context);
       if (!user) return json({ authenticated: false, error: 'Cloudflare Access authentication is required' }, { status: 401 });
       if (url.pathname === '/api/session') {
         if (request.method !== 'GET') return json({ error: 'Method not allowed' }, { status: 405, headers: { Allow: 'GET' } });
