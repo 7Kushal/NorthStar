@@ -184,6 +184,7 @@ function Sidebar({ page, go, open, accounts, activeAccount, onSwitchAccount, onA
           {accounts.length > 1 && <button className="account-delete" onClick={() => { if (window.confirm(`Delete ${account.name} and all locally stored data for it?`)) onDeleteAccount(account.id); }} aria-label={`Delete ${account.name}`}><Trash2 size={13} /></button>}
         </div>)}</div>
         <button className="account-add" onClick={() => { setAccountMenu(false); onAddAccount(); }}><Plus size={14} /> Create trading account</button>
+        <a className="cloudflare-logout" href="https://dash.cloudflare.com/oauth2/logout" target="_blank" rel="noreferrer" onClick={() => setAccountMenu(false)}>Log out of Cloudflare <ExternalLink size={13} /></a>
       </div>}
     </div>
     <div className="user-card"><span>NS</span><div><b>NorthStar Trader</b><small>Browser-local workspace</small></div></div>
