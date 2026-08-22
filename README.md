@@ -32,16 +32,17 @@ Connect this repository to Cloudflare Workers Builds and configure:
 `/api/forex-factory` endpoint used by the economic calendar and exposes the
 verified Cloudflare Access identity at `/api/session`.
 
-## Gmail-only sign-in
+## Cloudflare-account-only sign-in
 
 NorthStar is designed to sit behind Cloudflare Access. There is no application
 sign-up flow.
 
-1. In Cloudflare Zero Trust, add **Google** under **Integrations → Identity providers**.
+1. In Cloudflare Zero Trust, open **Integrations → Identity providers** and use
+   the **Cloudflare** identity provider with **Restrict to account members** enabled.
 2. Enable Access for the `northstar` Worker and its production hostname.
-3. Create an **Allow** policy using the **Emails** selector and enter the exact
-   Gmail address that should be permitted. Do not use an `Everyone` rule.
-4. Select Google as the only login method for the application.
+3. Create an **Allow** policy using the **Cloudflare account member** selector.
+   Do not use an `Everyone` rule.
+4. Select Cloudflare as the only login method for the application.
 
 The Worker trusts only the identity verified by `ctx.access`. Local Vite
 development uses a clearly labelled local-development identity.
