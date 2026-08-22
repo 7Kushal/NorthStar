@@ -29,8 +29,27 @@ Connect this repository to Cloudflare Workers Builds and configure:
 
 `wrangler.jsonc` uploads `dist/` as static assets, enables SPA routing, and runs
 `worker/index.js` for `/api/*`. The Worker provides the production
-`/api/forex-factory` endpoint used by the economic calendar.
+`/api/forex-factory` endpoint used by the economic calendar and exposes the
+verified Cloudflare Access identity at `/api/session`.
+
+## Gmail-only sign-in
+
+NorthStar is designed to sit behind Cloudflare Access. There is no application
+sign-up flow.
+
+1. In Cloudflare Zero Trust, add **Google** under **Integrations → Identity providers**.
+2. Enable Access for the `northstar` Worker and its production hostname.
+3. Create an **Allow** policy using the **Emails** selector and enter the exact
+   Gmail address that should be permitted. Do not use an `Everyone` rule.
+4. Select Google as the only login method for the application.
+
+The Worker trusts only the identity verified by `ctx.access`. Local Vite
+development uses a clearly labelled local-development identity.
 
 ## Data persistence
 
-Journal entries, check-ins, plans, settings, and interface preferences are stored in browser `localStorage`. They persist on the same deployed origin and browser profile, but they are not synchronized across devices. A hosted database and authentication layer are required before offering multi-device accounts.
+Each trading account has its own journal entries, check-ins, playbooks, risk
+settings and analytics state in browser `localStorage`. Existing NorthStar data
+is migrated automatically into a **Primary account**. Records persist on the
+same deployed origin and browser profile, but they are not synchronized across
+devices. Cloudflare D1 is still required for cloud synchronization.
