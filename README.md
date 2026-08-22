@@ -1,6 +1,6 @@
-# NorthStar
+# EdgeTrader
 
-NorthStar is a React trading journal and execution-review workspace with live BTC/XAU charts, acknowledged pre-trade check-ins, a journal calendar, economic events, risk controls, and performance analytics.
+EdgeTrader is a React trading journal and execution-review workspace with live BTC/XAU charts, acknowledged pre-trade check-ins, a journal calendar, economic events, risk controls, and performance analytics.
 
 ## Local development
 
@@ -33,7 +33,7 @@ Connect this repository to Cloudflare Workers Builds and configure:
 
 ## Public access
 
-NorthStar does not require authentication. Anyone with the deployed URL can
+EdgeTrader does not require authentication. Anyone with the deployed URL can
 open the application. Each visitor receives a separate browser-local workspace;
 data is not shared between browsers or devices.
 

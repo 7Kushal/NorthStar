@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import {
-  Activity, ArrowDownRight, ArrowUpRight, BarChart3, Bell, BookOpen, CalendarDays,
+  Activity, ArrowDownRight, ArrowUpRight, BarChart3, BookOpen, CalendarDays,
   Check, ChevronDown, CircleDollarSign, ClipboardCheck, Gauge, LayoutDashboard,
   LineChart, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, Target, Trash2,
   TrendingUp, WalletCards, X, ZoomIn, Moon, Sun, ExternalLink, RefreshCw, Clock3,
@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { useLocalState } from './hooks/useLocalState';
 import { useAccountWorkspace } from './hooks/useAccountWorkspace';
-import { useMarket } from './hooks/useMarket';
 import { useEconomicCalendar } from './hooks/useEconomicCalendar';
 
 const INITIAL = {
@@ -24,13 +23,13 @@ const INSTRUMENTS = {
   XAUUSD: { label: 'XAU / USD', name: 'Gold Spot / US Dollar', icon: '◆', accent: 'gold' },
 };
 const NAV = [
-  ['dashboard', LayoutDashboard, 'Overview'], ['terminal', LineChart, 'Terminal'],
-  ['journal', BookOpen, 'Journal'], ['analytics', BarChart3, 'Analytics'],
+  ['dashboard', LayoutDashboard, 'Overview'], ['journal', BookOpen, 'Journal'],
+  ['analytics', BarChart3, 'Analytics'],
   ['calendar', CalendarDays, 'Economic calendar'], ['plans', Target, 'Playbooks'],
   ['settings', Settings, 'Settings'],
 ];
 const TITLES = {
-  dashboard: ['Overview', 'Command center'], terminal: ['Execution terminal', 'Live markets'],
+  dashboard: ['Overview', 'Command center'],
   journal: ['Trading journal', 'Review & reflect'], analytics: ['Performance analytics', 'Find your edge'],
   calendar: ['Economic calendar', 'United States · live weekly events'],
   premarket: ['Pre-market routine', 'Prepare with intention'], plans: ['Strategy playbooks', 'Your execution system'],
@@ -46,6 +45,7 @@ const ELEFIN_CHECKS = [
 ];
 const ELEFIN_EMOTIONS = ['Calm', 'Focused', 'Confident', 'Hesitant', 'Anxious', 'FOMO'];
 const ELEFIN_URL = 'https://my.elefin.com/dashboard';
+const FLOW_TYPES = ['Context', 'Trigger', 'Decision', 'Confirmation', 'Risk', 'Entry', 'Management', 'Exit', 'Review'];
 
 const money = (value, sign = true) => `${sign && value > 0 ? '+' : ''}${value < 0 ? '−' : ''}$${Math.abs(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const plainMoney = value => Number.isFinite(value) ? `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
@@ -68,15 +68,13 @@ const updateStoredCheckinStatus = (id, status, accountId) => {
 function WelcomeScreen({ account, accountCount, onEnter }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  return <main className="welcome-screen"><section className="welcome-card"><div className="welcome-top"><div className="welcome-brand"><Sparkles size={20} /></div></div><div className="welcome-status"><span /> Workspace ready</div><p>WELCOME TO NORTHSTAR</p><h1>{greeting}, Trader.</h1><span>Your trading workspace is ready. Continue with <b>{account.name}</b>, or switch accounts from the navigation after entering.</span><div className="welcome-summary"><article><small>ACTIVE ACCOUNT</small><b>{account.name}</b><span>{account.broker} · {account.type}</span></article><article><small>WORKSPACES</small><b>{accountCount}</b><span>Independent trading account{accountCount === 1 ? '' : 's'}</span></article></div><button className="primary-button welcome-enter" onClick={onEnter}>Enter NorthStar <ArrowUpRight size={17} /></button><small className="welcome-security"><ShieldCheck size={13} /> Public access · Your workspace data stays in this browser</small></section></main>;
+  return <main className="welcome-screen"><div className="welcome-aurora" aria-hidden="true" /><section className="welcome-card"><div className="welcome-top"><div className="welcome-brand"><Sparkles size={20} /></div><span className="welcome-wordmark">EDGETRADER <i>OS</i></span></div><div className="welcome-status"><span /> Workspace ready</div><p>WELCOME TO EDGETRADER</p><h1>{greeting}, Trader.</h1><span>Your trading workspace is ready. Continue with <b>{account.name}</b>, or switch accounts from the navigation after entering.</span><div className="welcome-summary"><article><small>ACTIVE ACCOUNT</small><b>{account.name}</b><span>{account.broker} · {account.type}</span></article><article><small>WORKSPACES</small><b>{accountCount}</b><span>Independent trading account{accountCount === 1 ? '' : 's'}</span></article></div><button className="primary-button welcome-enter" onClick={onEnter}>Enter EdgeTrader <ArrowUpRight size={17} /></button><small className="welcome-security"><ShieldCheck size={13} /> Public access · Your workspace data stays in this browser</small></section></main>;
 }
 
 export default function App() {
   const workspace = useAccountWorkspace(INITIAL);
   const { accounts, activeAccount, data, setData, switchAccount, createAccount, deleteAccount } = workspace;
   const [page, setPage] = useState('dashboard');
-  const [symbol, setSymbol] = useState('BTCUSD');
-  const [timeframe, setTimeframe] = useState('M5');
   const [mobileNav, setMobileNav] = useState(false);
   const [navCollapsed, setNavCollapsed] = useLocalState('northstar-nav-collapsed', false);
   const [tradeModal, setTradeModal] = useState(false);
@@ -87,7 +85,6 @@ export default function App() {
   const [elefinModal, setElefinModal] = useState(false);
   const [theme, setTheme] = useLocalState('northstar-theme', 'dark');
   const [workspaceEntered, setWorkspaceEntered] = useState(() => sessionStorage.getItem('northstar-workspace-entered') === 'true');
-  const market = useMarket(symbol, timeframe, page === 'terminal');
   const sessions = data.sessions || [];
   const activePlan = data.plans.find(plan => plan.active);
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -138,10 +135,9 @@ export default function App() {
   return <div className={`app-shell theme-${theme} ${navCollapsed ? 'nav-collapsed' : ''}`}>
     <Sidebar page={page} go={go} open={mobileNav} accounts={accounts} activeAccount={activeAccount} onSwitchAccount={selectAccount} onAddAccount={() => setAccountModal(true)} onDeleteAccount={deleteAccount} />
     <main className="main-shell">
-      <Topbar page={page} onMenu={toggleNavigation} onNewTrade={() => openTrade()} theme={theme} onTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} navCollapsed={navCollapsed} data={data} totalPnl={totalPnl} todayPnl={todayPnl} market={market} symbol={symbol} activeAccount={activeAccount} />
+      <Topbar page={page} onMenu={toggleNavigation} onNewTrade={() => openTrade()} theme={theme} onTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} navCollapsed={navCollapsed} data={data} totalPnl={totalPnl} activeAccount={activeAccount} />
       <div className="account-workspace" key={activeAccount.id}>
         {page === 'dashboard' && <Dashboard data={data} totalPnl={totalPnl} todayPnl={todayPnl} todayTrades={todayTrades} activePlan={activePlan} go={go} theme={theme} />}
-        {page === 'terminal' && <Terminal symbol={symbol} setSymbol={setSymbol} timeframe={timeframe} setTimeframe={setTimeframe} market={market} theme={theme} />}
         {page === 'journal' && <Journal trades={data.trades} sessions={sessions} onAdd={openTrade} onReview={setReviewTrade} onDelete={id => patch(next => next.trades = next.trades.filter(t => t.id !== id))} />}
         {page === 'analytics' && <Analytics trades={data.trades} sessions={sessions} theme={theme} />}
         {page === 'calendar' && <EconomicCalendar />}
@@ -167,13 +163,26 @@ export default function App() {
 
 function Sidebar({ page, go, open, accounts, activeAccount, onSwitchAccount, onAddAccount, onDeleteAccount }) {
   const [accountMenu, setAccountMenu] = useState(false);
+  const accountMenuRef = useRef(null);
+  useEffect(() => {
+    if (!accountMenu) return undefined;
+    const close = event => {
+      if (event.key === 'Escape' || (event.type === 'pointerdown' && !accountMenuRef.current?.contains(event.target))) setAccountMenu(false);
+    };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [accountMenu]);
   return <aside className={`sidebar ${open ? 'open' : ''}`}>
-    <div className="logo"><span><Sparkles size={17} /></span><div>northstar<small>TRADING INTELLIGENCE</small></div></div>
+    <div className="logo"><span><Sparkles size={17} /></span><div>EdgeTrader<small>TRADING INTELLIGENCE</small></div></div>
     <div className="nav-label">Workspace</div>
     <nav>{NAV.map(([id, Icon, label]) => <button key={id} className={page === id ? 'active' : ''} onClick={() => go(id)} title={label} aria-label={label}><Icon size={18} /><span>{label}</span>{page === id && <i />}</button>)}</nav>
     <div className="sidebar-spacer" />
     <div className="system-chip"><i /> All systems operational</div>
-    <div className="account-switcher">
+    <div className="account-switcher" ref={accountMenuRef}>
       <button className="account-switcher-trigger" onClick={() => setAccountMenu(current => !current)} aria-expanded={accountMenu}>
         <span><WalletCards size={17} /></span><div><b>{activeAccount.name}</b><small>{activeAccount.broker} · {activeAccount.type}</small></div><ChevronDown size={15} />
       </button>
@@ -184,26 +193,31 @@ function Sidebar({ page, go, open, accounts, activeAccount, onSwitchAccount, onA
           {accounts.length > 1 && <button className="account-delete" onClick={() => { if (window.confirm(`Delete ${account.name} and all locally stored data for it?`)) onDeleteAccount(account.id); }} aria-label={`Delete ${account.name}`}><Trash2 size={13} /></button>}
         </div>)}</div>
         <button className="account-add" onClick={() => { setAccountMenu(false); onAddAccount(); }}><Plus size={14} /> Create trading account</button>
-        <a className="cloudflare-logout" href="https://dash.cloudflare.com/oauth2/logout" target="_blank" rel="noreferrer" onClick={() => setAccountMenu(false)}>Log out of Cloudflare <ExternalLink size={13} /></a>
+        <button className="cloudflare-logout" type="button" onClick={async () => {
+          setAccountMenu(false);
+          sessionStorage.removeItem('northstar-workspace-entered');
+          try {
+            await Promise.race([
+              fetch('/cdn-cgi/access/logout', { credentials: 'include', cache: 'no-store' }),
+              new Promise(resolve => window.setTimeout(resolve, 1400)),
+            ]);
+          } catch {
+            // Access may not be enabled on a public deployment; dashboard logout still runs.
+          }
+          window.location.replace('https://dash.cloudflare.com/oauth2/logout');
+        }}>End Cloudflare session <ExternalLink size={13} /></button>
       </div>}
     </div>
-    <div className="user-card"><span>NS</span><div><b>NorthStar Trader</b><small>Browser-local workspace</small></div></div>
+    <div className="user-card"><span>ET</span><div><b>EdgeTrader</b><small>Browser-local workspace</small></div></div>
   </aside>;
 }
 
-function Topbar({ page, onMenu, onNewTrade, theme, onTheme, navCollapsed, data, totalPnl, todayPnl, market, symbol, activeAccount }) {
+function Topbar({ page, onMenu, onNewTrade, theme, onTheme, navCollapsed, data, totalPnl, activeAccount }) {
   const [title, eyebrow] = TITLES[page];
-  const openPositions = (data.positions || []).filter(position => (position.status || 'open') === 'open');
-  const hasUnpricedPosition = openPositions.some(position => position.symbol !== symbol) || (openPositions.length > 0 && !Number.isFinite(market.price));
-  const openPnl = hasUnpricedPosition ? null : openPositions.reduce((sum, position) => {
-    const direction = position.side === 'buy' ? 1 : -1;
-    return sum + (market.price - Number(position.entry)) * Number(position.size || 0) * direction;
-  }, 0);
+  const openPnl = 0;
   const balance = Number(data.settings.startingBalance || 0) + totalPnl;
-  const equity = openPnl === null ? null : balance + openPnl;
-  const lossUsage = Math.max(0, -todayPnl) / Math.max(1, Number(data.settings.maxDailyLoss || 1));
-  const marginHealth = lossUsage >= 1 ? 'Critical' : lossUsage >= .6 ? 'Caution' : 'Healthy';
-  return <header className="topbar"><button className="menu-button" onClick={onMenu} aria-label={navCollapsed ? 'Open navigation' : 'Toggle navigation'} title={navCollapsed ? 'Open navigation' : 'Toggle navigation'}><Menu size={20} /></button><div className="topbar-title"><p>{eyebrow}</p><h1>{title}</h1><span className="topbar-account"><WalletCards size={12} /> {activeAccount.name}</span></div><div className="account-strip" aria-label="Account status"><div><span>BALANCE</span><b>{plainMoney(balance)}</b></div><div><span>OPEN P&amp;L</span><b className={openPnl === null ? '' : openPnl >= 0 ? 'positive' : 'negative'}>{openPnl === null ? '—' : money(openPnl)}</b></div><div><span>EQUITY</span><b>{equity === null ? '—' : plainMoney(equity)}</b></div><div><span>MARGIN HEALTH</span><b className={`health-${marginHealth.toLowerCase()}`}>{marginHealth}</b></div></div><div className="top-actions"><div className="today"><CalendarDays size={15} />{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div><button className="round-button theme-toggle" onClick={onTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>{theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}</button><button className="round-button"><Bell size={18} /><i /></button><button className="primary-button" onClick={onNewTrade}><Plus size={16} /> Log trade</button></div></header>;
+  const equity = balance + openPnl;
+  return <header className="topbar"><button className="menu-button" onClick={onMenu} aria-label={navCollapsed ? 'Open navigation' : 'Toggle navigation'} title={navCollapsed ? 'Open navigation' : 'Toggle navigation'}><Menu size={20} /></button><div className="topbar-title"><p>{eyebrow}</p><h1>{title}</h1><span className="topbar-account"><WalletCards size={12} /> {activeAccount.name}</span></div><div className="account-strip" aria-label="Account status"><div><span>BALANCE</span><b>{plainMoney(balance)}</b></div><div><span>OPEN P&amp;L</span><b className="positive">{money(openPnl)}</b></div><div><span>EQUITY</span><b>{plainMoney(equity)}</b></div></div><div className="top-actions"><div className="today"><CalendarDays size={15} />{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div><button className="round-button theme-toggle" onClick={onTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>{theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}</button><button className="primary-button" onClick={onNewTrade}><Plus size={16} /> Log trade</button></div></header>;
 }
 
 function Dashboard({ data, totalPnl, todayPnl, todayTrades, activePlan, go, theme }) {
@@ -216,7 +230,7 @@ function Dashboard({ data, totalPnl, todayPnl, todayTrades, activePlan, go, them
     ['Today', money(todayPnl), CircleDollarSign, todayPnl >= 0 ? 'green' : 'red', `${todayTrades.length} trades this session`],
   ];
   return <div className="page-stack">
-    <section className="command-banner"><div><div className="live-badge"><span /> Session controls active</div><h2>Trade the process.<br /><em>Let results follow.</em></h2><p>Your workspace connects preparation, execution and review in one disciplined loop.</p></div><div className="command-side"><div><span>ACTIVE PLAYBOOK</span><b>{activePlan?.name || 'None selected'}</b><small>{activePlan ? activePlan.market : 'Create a playbook before your next session'}</small></div><button onClick={() => go(activePlan ? 'premarket' : 'plans')}>{activePlan ? 'Start pre-market' : 'Create playbook'} <ArrowUpRight size={15} /></button></div></section>
+    <section className="command-banner"><div><div className="live-badge"><span /> Session controls active</div><h2>Trade the process. <em>Let results follow.</em></h2><p>Preparation, execution and review—one disciplined loop.</p></div><div className="command-side"><div><span>ACTIVE PLAYBOOK</span><b>{activePlan?.name || 'None selected'}</b><small>{activePlan ? activePlan.market : 'Select a process before your next session'}</small></div><button onClick={() => go(activePlan ? 'premarket' : 'plans')}>{activePlan ? 'Open routine' : 'Choose playbook'} <ArrowUpRight size={14} /></button></div></section>
     <div className="stats-grid">{cards.map(([label, value, Icon, tone, help]) => <article className="stat-card" key={label}><div><span>{label}</span><i className={tone}><Icon size={17} /></i></div><strong className={label.includes('P&L') || label === 'Today' ? (value.includes('−') ? 'negative' : 'positive') : ''}>{value}</strong><small>{help}</small></article>)}</div>
     <div className="dashboard-grid"><EquityPanel trades={data.trades} start={data.settings.startingBalance} theme={theme} /><GuardrailPanel data={data} todayTrades={todayTrades} todayPnl={todayPnl} go={go} /></div>
     <RecentTrades trades={data.trades.slice(0, 5)} go={go} />
@@ -229,8 +243,8 @@ function EquityPanel({ trades, start, theme }) {
   const firstTradeTime = sorted.length ? new Date(sorted[0].date).getTime() : Date.now();
   const points = [[firstTradeTime - 3600000, start], ...sorted.map(trade => [new Date(trade.date).getTime(), running += Number(trade.pnl) || 0])];
   const chartLine = theme === 'dark' ? '#292d38' : '#f0f1f5';
-  const option = { animation: false, grid: { left: 12, right: 12, top: 24, bottom: 12, containLabel: true }, tooltip: { trigger: 'axis', triggerOn: 'mousemove|click', alwaysShowContent: true, hideDelay: 60000, enterable: true, confine: true, valueFormatter: v => plainMoney(v) }, xAxis: { type: 'time', axisLabel: { color: '#8e91a0', fontSize: 13 }, axisLine: { lineStyle: { color: chartLine } }, splitLine: { show: false } }, yAxis: { type: 'value', scale: true, position: 'right', axisLabel: { color: '#8e91a0', formatter: v => `$${(v / 1000).toFixed(1)}k` }, splitLine: { lineStyle: { color: chartLine } } }, series: [{ type: 'line', data: trades.length ? points : [], showSymbol: false, smooth: .3, lineStyle: { color: '#1677ff', width: 3 }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#1677ff3d' }, { offset: 1, color: '#1677ff00' }] } } }] };
-  return <section className="surface equity-surface"><SectionTitle eyebrow="ACCOUNT GROWTH" title="Equity curve" action="All time" />{trades.length ? <ReactECharts option={option} style={{ height: 280 }} /> : <EmptyState icon={TrendingUp} title="Your equity curve starts here" text="Log your first completed trade to begin tracking account growth." />}</section>;
+  const option = { animation: false, grid: { left: 8, right: 8, top: 18, bottom: 8, containLabel: true }, tooltip: { trigger: 'axis', triggerOn: 'mousemove|click', alwaysShowContent: true, hideDelay: 60000, enterable: true, confine: true, valueFormatter: v => plainMoney(v) }, xAxis: { type: 'time', axisLabel: { color: '#84909c', fontSize: 10 }, axisLine: { lineStyle: { color: chartLine } }, splitLine: { show: false } }, yAxis: { type: 'value', scale: true, position: 'right', axisLabel: { color: '#84909c', fontSize: 10, formatter: v => Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${Number(v).toFixed(0)}` }, splitLine: { lineStyle: { color: chartLine } } }, series: [{ type: 'line', data: trades.length ? points : [], showSymbol: false, smooth: .28, lineStyle: { color: '#6e8eaa', width: 2 }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#6e8eaa34' }, { offset: 1, color: '#6e8eaa00' }] } } }] };
+  return <section className="surface equity-surface"><SectionTitle eyebrow="ACCOUNT GROWTH" title="Equity curve" action="All time" />{trades.length ? <ReactECharts option={option} style={{ height: 180 }} /> : <EmptyState icon={TrendingUp} title="Your equity curve starts here" text="Log your first completed trade to begin tracking account growth." />}</section>;
 }
 
 function GuardrailPanel({ data, todayTrades, todayPnl, go }) {
@@ -243,11 +257,12 @@ function GuardrailPanel({ data, todayTrades, todayPnl, go }) {
     ['Session check-in', acknowledgedCheckIn ? 'Elefin check-in acknowledged' : preparationComplete ? 'Legacy routine completed' : 'Check-in required', !preparationComplete],
     ['Active plan', data.plans.some(p => p.active) ? data.plans.find(p => p.active).name : 'No playbook selected', !data.plans.some(p => p.active)],
   ];
-  return <section className="surface guard-surface"><SectionTitle eyebrow="LIVE CONTROLS" title="Guardrails" action="Configure" onAction={() => go('settings')} /><div className="guard-list">{items.map(([name, detail, warning]) => <div key={name}><span className={warning ? 'warn' : ''}>{warning ? '!' : <Check size={13} />}</span><div><b>{name}</b><small>{detail}</small></div><em className={warning ? 'warn' : ''}>{warning ? 'Action needed' : 'Active'}</em></div>)}</div></section>;
+  const ready = items.filter(([, , warning]) => !warning).length;
+  return <section className="surface guard-surface"><header className="control-header"><div><p>RISK ENGINE</p><h2>Live controls</h2></div><button onClick={() => go('settings')}>Settings <ArrowUpRight size={13} /></button></header><div className="control-readiness"><span><i /> SYSTEM STATUS</span><b>{ready}/{items.length} ready</b></div><div className="guard-list">{items.map(([name, detail, warning]) => <div className={warning ? 'warning' : 'ready'} key={name}><span>{warning ? '!' : <Check size={12} />}</span><div><b>{name}</b><small>{detail}</small></div><em>{warning ? 'Review' : 'Ready'}</em></div>)}</div></section>;
 }
 
 function RecentTrades({ trades, go }) {
-  return <section className="surface recent"><SectionTitle eyebrow="RECENT ACTIVITY" title="Execution log" action="Open journal" onAction={() => go('journal')} />{trades.length ? <TradeTable trades={trades} /> : <EmptyState icon={BookOpen} title="No journal entries yet" text="Record a trade manually or close a position from the terminal." />}</section>;
+  return <section className="surface recent"><SectionTitle eyebrow="RECENT ACTIVITY" title="Execution log" action="Open journal" onAction={() => go('journal')} />{trades.length ? <TradeTable trades={trades} /> : <EmptyState icon={BookOpen} title="No journal entries yet" text="Open the journal and select a calendar date to record your first trade." />}</section>;
 }
 
 function Terminal({ symbol, setSymbol, timeframe, setTimeframe, market, theme }) {
@@ -476,7 +491,14 @@ function Premarket({ routine, activePlan, patch, go }) {
 }
 
 function Plans({ plans, patch, onAdd }) {
-  return <div className="page-stack"><div className="page-intro"><div><p>STRATEGY LIBRARY</p><h2>Turn your edge into a repeatable system.</h2><span>Keep entry criteria visible before and during execution.</span></div><button className="primary-button" onClick={onAdd}><Plus size={16} /> New playbook</button></div>{plans.length ? <div className="plan-grid">{plans.map(plan => <article className={`surface plan-card ${plan.active ? 'active' : ''}`} key={plan.id}><div className="plan-top"><span>{plan.active ? '● ACTIVE PLAYBOOK' : 'PLAYBOOK'}</span><Target size={18} /></div><h2>{plan.name}</h2><p>{plan.market || 'All connected markets'}</p><ul>{plan.rules.map(rule => <li key={rule}><Check size={13} />{rule}</li>)}</ul><footer><button onClick={() => patch(next => next.plans.forEach(p => p.active = p.id === plan.id))}>{plan.active ? 'Currently active' : 'Set active'}</button><button className="icon-danger" onClick={() => patch(next => next.plans = next.plans.filter(p => p.id !== plan.id))}><Trash2 size={14} /></button></footer></article>)}</div> : <EmptyState large icon={Target} title="Build your first playbook" text="Define your setup, market and entry criteria. Nothing is pre-filled or fabricated." action="Create playbook" onAction={onAdd} />}</div>;
+  return <div className="page-stack"><div className="page-intro"><div><p>STRATEGY LIBRARY</p><h2>Build the decision path behind your edge.</h2><span>Create a visible trading flow from context to review.</span></div><button className="primary-button" onClick={onAdd}><Plus size={16} /> New flow</button></div>{plans.length ? <div className="plan-grid">{plans.map(plan => {
+    const flow = plan.flow?.length ? plan.flow : (plan.rules || []).map((text, index) => ({ id: `${plan.id}-${index}`, type: index === 0 ? 'Trigger' : index === (plan.rules || []).length - 1 ? 'Entry' : 'Confirmation', text }));
+    return <article className={`surface plan-card ${plan.active ? 'active' : ''}`} key={plan.id}><div className="plan-top"><span>{plan.active ? '● ACTIVE FLOW' : 'TRADE FLOW'}</span><Target size={18} /></div><h2>{plan.name}</h2><p>{plan.market || 'All connected markets'}</p><PlaybookFlow steps={flow} compact /><footer><button onClick={() => patch(next => next.plans.forEach(p => p.active = p.id === plan.id))}>{plan.active ? 'Currently active' : 'Set active'}</button><button className="icon-danger" onClick={() => patch(next => next.plans = next.plans.filter(p => p.id !== plan.id))}><Trash2 size={14} /></button></footer></article>;
+  })}</div> : <EmptyState large icon={Target} title="Build your first trading flow" text="Map each real decision from context and trigger through execution and review." action="Create flow" onAction={onAdd} />}</div>;
+}
+
+function PlaybookFlow({ steps, compact = false }) {
+  return <div className={`playbook-flow ${compact ? 'compact' : ''}`}>{steps.map((step, index) => <React.Fragment key={step.id || `${step.type}-${index}`}><div className={`flow-node type-${String(step.type || 'step').toLowerCase()}`}><span>{String(index + 1).padStart(2, '0')}</span><div><small>{step.type || 'Step'}</small><b>{step.text?.trim() || 'Define this step'}</b></div></div>{index < steps.length - 1 && <div className="flow-connector"><i /><ChevronDown size={13} /></div>}</React.Fragment>)}</div>;
 }
 
 function RiskSettings({ settings, patch, account }) {
@@ -493,9 +515,18 @@ function TradeModal({ plans, initialDate, onClose, onSave }) {
 }
 
 function PlanModal({ onClose, onSave }) {
-  const [name, setName] = useState(''), [market, setMarket] = useState(''), [rules, setRules] = useState(''), [error, setError] = useState('');
-  const submit = e => { e.preventDefault(); const list = rules.split('\n').map(x => x.trim()).filter(Boolean); if (!name.trim() || !list.length) return setError('Add a playbook name and at least one rule.'); onSave({ id: uid(), name: name.trim(), market: market.trim(), rules: list, active: false }); };
-  return <Modal onClose={onClose} eyebrow="NEW PLAYBOOK" title="Define your execution edge"><form onSubmit={submit}><Field label="Playbook name"><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. London liquidity sweep" autoFocus /></Field><Field label="Market focus"><input value={market} onChange={e => setMarket(e.target.value)} placeholder="e.g. XAUUSD · London session" /></Field><Field label="Entry checklist"><textarea value={rules} onChange={e => setRules(e.target.value)} placeholder={'One rule per line\nWait for liquidity sweep\nConfirm displacement\nEnter on retracement'} /></Field>{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">Create playbook</button></div></form></Modal>;
+  const makeStep = (type = 'Confirmation') => ({ id: uid(), type, text: '' });
+  const [name, setName] = useState(''), [market, setMarket] = useState(''), [steps, setSteps] = useState(() => [makeStep('Context'), makeStep('Trigger'), makeStep('Entry')]), [error, setError] = useState('');
+  const updateStep = (id, changes) => setSteps(current => current.map(step => step.id === id ? { ...step, ...changes } : step));
+  const moveStep = (index, direction) => setSteps(current => { const target = index + direction; if (target < 0 || target >= current.length) return current; const next = [...current]; [next[index], next[target]] = [next[target], next[index]]; return next; });
+  const removeStep = id => setSteps(current => current.length === 1 ? current : current.filter(step => step.id !== id));
+  const submit = e => {
+    e.preventDefault();
+    const flow = steps.map(step => ({ ...step, text: step.text.trim() })).filter(step => step.text);
+    if (!name.trim() || !flow.length) return setError('Add a flow name and describe at least one node.');
+    onSave({ id: uid(), name: name.trim(), market: market.trim(), flow, rules: flow.map(step => step.text), active: false });
+  };
+  return <Modal onClose={onClose} eyebrow="NEW TRADE FLOW" title="Map your execution edge"><form className="playbook-flow-form" onSubmit={submit}><div className="flow-meta"><Field label="Flow name"><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. London liquidity sweep" autoFocus /></Field><Field label="Market focus"><input value={market} onChange={e => setMarket(e.target.value)} placeholder="e.g. XAUUSD · London session" /></Field></div><div className="flow-builder-layout"><section className="flow-editor"><header><div><p>FLOW NODES</p><h3>Build the decision sequence</h3></div><button type="button" onClick={() => setSteps(current => [...current, makeStep()])}><Plus size={13} /> Add node</button></header><div className="flow-step-editor-list">{steps.map((step, index) => <div className="flow-step-editor" key={step.id}><span>{String(index + 1).padStart(2, '0')}</span><select value={step.type} onChange={e => updateStep(step.id, { type: e.target.value })}>{FLOW_TYPES.map(type => <option key={type}>{type}</option>)}</select><input value={step.text} onChange={e => updateStep(step.id, { text: e.target.value })} placeholder="Describe the condition or action" /><div><button type="button" disabled={index === 0} onClick={() => moveStep(index, -1)} aria-label="Move node up">↑</button><button type="button" disabled={index === steps.length - 1} onClick={() => moveStep(index, 1)} aria-label="Move node down">↓</button><button type="button" disabled={steps.length === 1} onClick={() => removeStep(step.id)} aria-label="Delete node"><Trash2 size={12} /></button></div></div>)}</div></section><section className="flow-preview"><header><p>LIVE GRAPH</p><h3>Your trade flow</h3></header><PlaybookFlow steps={steps} /></section></div>{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">Save trade flow</button></div></form></Modal>;
 }
 
 function AccountModal({ onClose, onSave }) {
@@ -594,7 +625,7 @@ function SessionStatusModal({ session, onAcknowledge, onCancel }) {
       <h3>Elefin opened in a new tab</h3>
       <p>Acknowledge this session to attach your pre-check to today’s journal calendar and include it in your analytics.</p>
       <div className="session-confirm-metrics"><div><span>CHECK STATUS</span><b>{greenCount} green · {session.answers.length - greenCount} red</b></div><div><span>EMOTION</span><b>{session.emotion}</b></div><div><span>STARTED</span><b>{new Date(session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</b></div></div>
-      <div className="session-confirm-note"><ShieldCheck size={17} /><span>Your notes and decisions are saved. Acknowledging makes this session part of Northstar’s permanent calendar memory.</span></div>
+      <div className="session-confirm-note"><ShieldCheck size={17} /><span>Your notes and decisions are saved. Acknowledging makes this session part of EdgeTrader’s permanent calendar memory.</span></div>
       <div className="session-confirm-actions"><button type="button" className="secondary-button" onClick={onCancel}>Cancel session</button><button type="button" className="primary-button" onClick={onAcknowledge}><Check size={16} /> Acknowledge session</button></div>
     </div>
   </Modal>;
