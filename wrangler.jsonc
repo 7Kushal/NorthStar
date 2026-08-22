@@ -1,4 +1,5 @@
 {
+  "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "northstar",
   "compatibility_date": "2026-08-22",
   "main": "./worker/index.js",
@@ -7,6 +8,24 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "edgetrader-prod",
+      "database_id": "d1ee16b3-c11d-4027-93ec-523a46ff619d",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "access": {
+    "dev": {
+      "aud": "edgetrader-local",
+      "identity": {
+        "user_uuid": "local-edgetrader-user",
+        "email": "local@edgetrader.dev",
+        "name": "Local Trader"
+      }
+    }
   },
   "observability": {
     "logs": {
