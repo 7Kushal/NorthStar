@@ -7,6 +7,7 @@ import {
   TrendingUp, WalletCards, X, ZoomIn, Moon, Sun, ExternalLink, RefreshCw, Clock3,
   Newspaper, Radio, ZoomOut, RotateCcw, ChevronLeft, ChevronRight, Camera,
   Maximize2, Pencil, Cloud, CloudOff, LoaderCircle, Database,
+  BadgeCheck, LogOut, UserRound,
 } from 'lucide-react';
 import { useLocalState } from './hooks/useLocalState';
 import { useAccountWorkspace } from './hooks/useAccountWorkspace';
@@ -25,15 +26,14 @@ const INSTRUMENTS = {
 const NAV = [
   ['dashboard', LayoutDashboard, 'Overview'], ['journal', BookOpen, 'Journal'],
   ['analytics', BarChart3, 'Analytics'],
-  ['calendar', CalendarDays, 'Economic calendar'], ['plans', Target, 'Playbooks'],
+  ['plans', Target, 'Playbooks'],
   ['settings', Settings, 'Settings'],
 ];
 const TITLES = {
-  dashboard: ['Overview', 'Command center'],
-  journal: ['Trading journal', 'Review & reflect'], analytics: ['Performance analytics', 'Find your edge'],
-  calendar: ['Economic calendar', 'United States · live weekly events'],
-  premarket: ['Pre-market routine', 'Prepare with intention'], plans: ['Strategy playbooks', 'Your execution system'],
-  settings: ['Risk controls', 'Account configuration'],
+  dashboard: ['Overview', ''],
+  journal: ['Trading journal', ''], analytics: ['Performance analytics', ''],
+  premarket: ['Pre-market routine', ''], plans: ['Strategy playbooks', ''],
+  settings: ['Risk controls', ''],
 };
 const CHECKS = ['Review scheduled market events', 'Mark higher-timeframe levels', 'Set session risk limits', 'Confirm active strategy', 'Check mental state and intention'];
 const ELEFIN_CHECKS = [
@@ -46,6 +46,7 @@ const ELEFIN_CHECKS = [
 const ELEFIN_EMOTIONS = ['Calm', 'Focused', 'Confident', 'Hesitant', 'Anxious', 'FOMO'];
 const ELEFIN_URL = 'https://my.elefin.com/dashboard';
 const FLOW_TYPES = ['Context', 'Trigger', 'Decision', 'Confirmation', 'Risk', 'Entry', 'Management', 'Exit', 'Review'];
+const FLOW_SCOPES = ['HTF', 'MTF', 'STF'];
 
 const money = (value, sign = true) => `${sign && value > 0 ? '+' : ''}${value < 0 ? '−' : ''}$${Math.abs(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const plainMoney = value => Number.isFinite(value) ? `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
@@ -102,15 +103,16 @@ function WorkspaceBootState({ status, error }) {
   return <main className="welcome-screen"><div className="welcome-aurora" aria-hidden="true" /><section className="welcome-card workspace-boot"><div className="welcome-top"><div className="welcome-brand">{failed ? <CloudOff size={20} /> : <Cloud size={20} />}</div><span className="welcome-wordmark">EDGETRADER <i>CLOUD</i></span></div><div className={`welcome-status ${failed ? 'failed' : ''}`}><span /> {failed ? 'Connection required' : 'Securing workspace'}</div><p>CLOUDFLARE D1</p><h1>{failed ? 'Workspace unavailable.' : 'Loading your workspace.'}</h1><span>{failed ? error : 'Identifying your Cloudflare Access account and loading its private journal.'}</span>{failed ? <button className="primary-button welcome-enter" onClick={() => window.location.reload()}><RefreshCw size={16} /> Try again</button> : <LoaderCircle className="workspace-loader" size={25} />}</section></main>;
 }
 
-function WelcomeScreen({ account, accountCount, identity, onEnter }) {
+function WelcomeScreen({ account, accountCount, identity, needsAccountSetup, onEnter, onSetup }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  return <main className="welcome-screen"><div className="welcome-aurora" aria-hidden="true" /><section className="welcome-card"><div className="welcome-top"><div className="welcome-brand"><Sparkles size={20} /></div><span className="welcome-wordmark">EDGETRADER <i>OS</i></span></div><div className="welcome-status"><span /> D1 workspace synced</div><p>WELCOME TO EDGETRADER</p><h1>{greeting}, Trader.</h1><span>Your private trading workspace is ready. Continue with <b>{account.name}</b>, or switch accounts after entering.</span><div className="welcome-summary"><article><small>ACTIVE ACCOUNT</small><b>{account.name}</b><span>{account.broker} · {account.type}</span></article><article><small>WORKSPACES</small><b>{accountCount}</b><span>Independent trading account{accountCount === 1 ? '' : 's'}</span></article></div><button className="primary-button welcome-enter" onClick={onEnter}>Enter EdgeTrader <ArrowUpRight size={17} /></button><small className="welcome-security"><ShieldCheck size={13} /> Signed in as {identity?.email || 'Cloudflare Access user'} · Encrypted in transit</small></section></main>;
+  const displayName = identity?.name?.trim() || identity?.email?.split('@')[0] || 'Trader';
+  return <main className="welcome-screen"><div className="welcome-aurora" aria-hidden="true" /><section className="welcome-card"><div className="welcome-top"><div className="welcome-brand"><Sparkles size={20} /></div><span className="welcome-wordmark">EDGETRADER <i>OS</i></span></div><div className="welcome-status"><span /> D1 workspace synced</div><p>WELCOME TO EDGETRADER</p><h1>{greeting}, {displayName}.</h1><span>{needsAccountSetup ? 'Your private workspace is ready. Set up your first trading account to begin journaling.' : <>Continue with <b>{account.name}</b>, or switch accounts after entering.</>}</span><div className="welcome-summary"><article><small>{needsAccountSetup ? 'CLOUDFLARE PROFILE' : 'ACTIVE ACCOUNT'}</small><b>{needsAccountSetup ? displayName : account.name}</b><span>{needsAccountSetup ? identity?.email : `${account.broker} · ${account.type}`}</span></article><article><small>TRADING ACCOUNTS</small><b>{needsAccountSetup ? 0 : accountCount}</b><span>{needsAccountSetup ? 'Create your first workspace' : `Independent account${accountCount === 1 ? '' : 's'}`}</span></article></div><button className="primary-button welcome-enter" onClick={needsAccountSetup ? onSetup : onEnter}>{needsAccountSetup ? <><Plus size={17} /> Set up first account</> : <>Enter EdgeTrader <ArrowUpRight size={17} /></>}</button><small className="welcome-security"><ShieldCheck size={13} /> Signed in as {identity?.email || 'Cloudflare Access user'} · Encrypted in transit</small></section></main>;
 }
 
 export default function App() {
   const workspace = useAccountWorkspace(INITIAL);
-  const { accounts, activeAccount, data, setData, switchAccount, createAccount, deleteAccount, identity, isHydrated, syncStatus, syncError, storageError } = workspace;
+  const { accounts, activeAccount, data, setData, switchAccount, createAccount, deleteAccount, identity, isHydrated, syncStatus, syncError, storageError, needsAccountSetup, lastSyncedAt, syncNow } = workspace;
   const [page, setPage] = useState('dashboard');
   const [mobileNav, setMobileNav] = useState(false);
   const [navCollapsed, setNavCollapsed] = useLocalState('northstar-nav-collapsed', false);
@@ -168,17 +170,17 @@ export default function App() {
   }, [theme]);
 
   if (!isHydrated) return <WorkspaceBootState status={syncStatus} error={syncError} />;
-  if (!workspaceEntered) return <WelcomeScreen account={activeAccount} accountCount={accounts.length} identity={identity} onEnter={() => { sessionStorage.setItem('northstar-workspace-entered', 'true'); setWorkspaceEntered(true); }} />;
+  if (!workspaceEntered || needsAccountSetup) return <><WelcomeScreen account={activeAccount} accountCount={accounts.length} identity={identity} needsAccountSetup={needsAccountSetup} onSetup={() => setAccountModal(true)} onEnter={() => { sessionStorage.setItem('northstar-workspace-entered', 'true'); setWorkspaceEntered(true); }} />{accountModal && <AccountModal required onClose={() => setAccountModal(false)} onSave={details => { createAccount(details); setAccountModal(false); }} />}</>;
 
   return <div className={`app-shell theme-${theme} ${navCollapsed ? 'nav-collapsed' : ''}`}>
-    <Sidebar page={page} go={go} open={mobileNav} accounts={accounts} activeAccount={activeAccount} identity={identity} syncStatus={syncStatus} onSwitchAccount={selectAccount} onAddAccount={() => setAccountModal(true)} onDeleteAccount={deleteAccount} />
+    <button className="mobile-nav-toggle" onClick={toggleNavigation} aria-label="Open navigation"><Menu size={18} /></button>
+    <Sidebar page={page} go={go} open={mobileNav} accounts={accounts} activeAccount={activeAccount} identity={identity} syncStatus={syncStatus} navCollapsed={navCollapsed} onToggleNavigation={toggleNavigation} onSwitchAccount={selectAccount} onAddAccount={() => setAccountModal(true)} onDeleteAccount={deleteAccount} />
     <main className="main-shell">
-      <Topbar page={page} onMenu={toggleNavigation} onNewTrade={() => openTrade()} theme={theme} onTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} navCollapsed={navCollapsed} data={data} totalPnl={totalPnl} activeAccount={activeAccount} />
+      <Topbar page={page} onNewTrade={() => openTrade()} theme={theme} onTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} data={data} totalPnl={totalPnl} activeAccount={activeAccount} syncStatus={syncStatus} lastSyncedAt={lastSyncedAt} onSync={syncNow} />
       <div className="account-workspace" key={activeAccount.id}>
-        {page === 'dashboard' && <Dashboard data={data} totalPnl={totalPnl} todayPnl={todayPnl} todayTrades={todayTrades} activePlan={activePlan} go={go} theme={theme} />}
+        {page === 'dashboard' && <Dashboard data={data} totalPnl={totalPnl} todayPnl={todayPnl} todayTrades={todayTrades} activePlan={activePlan} go={go} theme={theme} onCheckIn={() => setElefinModal(true)} />}
         {page === 'journal' && <Journal trades={data.trades} sessions={sessions} onAdd={openTrade} onReview={setReviewTrade} onDelete={id => patch(next => next.trades = next.trades.filter(t => t.id !== id))} />}
         {page === 'analytics' && <Analytics trades={data.trades} sessions={sessions} theme={theme} />}
-        {page === 'calendar' && <EconomicCalendar />}
         {page === 'premarket' && <Premarket routine={data.routine} activePlan={activePlan} patch={patch} go={go} />}
         {page === 'plans' && <Plans plans={data.plans} patch={patch} onAdd={() => setPlanModal('new')} onEdit={setPlanModal} />}
         {page === 'settings' && <RiskSettings settings={data.settings} patch={patch} account={activeAccount} identity={identity} syncStatus={syncStatus} />}
@@ -189,10 +191,8 @@ export default function App() {
     {planModal && <PlanModal initialPlan={planModal === 'new' ? null : planModal} onClose={() => setPlanModal(null)} onSave={plan => { patch(next => { const index = next.plans.findIndex(item => item.id === plan.id); if (index >= 0) next.plans[index] = plan; else { if (!next.plans.length) plan.active = true; next.plans.push(plan); } }); setPlanModal(null); }} />}
     {accountModal && <AccountModal onClose={() => setAccountModal(false)} onSave={details => { createAccount(details); setAccountModal(false); }} />}
     {reviewTrade && <ReviewModal trade={reviewTrade} onClose={() => setReviewTrade(null)} onSave={updates => { patch(next => Object.assign(next.trades.find(t => t.id === reviewTrade.id), updates)); setReviewTrade(null); }} />}
-    <button type="button" className="elefin-hanger" onClick={() => setElefinModal(true)} aria-haspopup="dialog" aria-expanded={elefinModal}>
-      <span className="elefin-hanger-icon"><img src="/elefin-icon.png" alt="" /></span>
-      <span><small>{sessions.length ? `${sessions.length} CHECK-IN${sessions.length === 1 ? '' : 'S'} SAVED` : 'PRE-TRADE GATE'}</small><b>Lets Go To Elefin</b></span>
-      <ExternalLink size={17} />
+    <button type="button" className="elefin-hanger elefin-logo-button" onClick={() => setElefinModal(true)} aria-label="Open Elefin pre-trade check-in" title="Elefin pre-trade check-in" aria-haspopup="dialog" aria-expanded={elefinModal}>
+      <span className="elefin-hanger-icon"><img src="/elefin-icon.png" alt="Elefin" /></span>
     </button>
     {elefinModal && <ElefinCheckIn accountId={activeAccount.id} onClose={() => setElefinModal(false)} onStart={stageSession} />}
     {pendingSession && <SessionStatusModal session={pendingSession} onAcknowledge={acknowledgeSession} onCancel={cancelSession} />}
@@ -201,13 +201,21 @@ export default function App() {
   </div>;
 }
 
-function Sidebar({ page, go, open, accounts, activeAccount, identity, syncStatus, onSwitchAccount, onAddAccount, onDeleteAccount }) {
+function Sidebar({ page, go, open, accounts, activeAccount, identity, syncStatus, navCollapsed, onToggleNavigation, onSwitchAccount, onAddAccount, onDeleteAccount }) {
   const [accountMenu, setAccountMenu] = useState(false);
+  const [profileMenu, setProfileMenu] = useState(false);
   const accountMenuRef = useRef(null);
+  const profileMenuRef = useRef(null);
   useEffect(() => {
-    if (!accountMenu) return undefined;
+    if (!accountMenu && !profileMenu) return undefined;
     const close = event => {
-      if (event.key === 'Escape' || (event.type === 'pointerdown' && !accountMenuRef.current?.contains(event.target))) setAccountMenu(false);
+      if (event.key === 'Escape') {
+        setAccountMenu(false);
+        setProfileMenu(false);
+        return;
+      }
+      if (event.type === 'pointerdown' && !accountMenuRef.current?.contains(event.target)) setAccountMenu(false);
+      if (event.type === 'pointerdown' && !profileMenuRef.current?.contains(event.target)) setProfileMenu(false);
     };
     document.addEventListener('pointerdown', close);
     document.addEventListener('keydown', close);
@@ -215,15 +223,28 @@ function Sidebar({ page, go, open, accounts, activeAccount, identity, syncStatus
       document.removeEventListener('pointerdown', close);
       document.removeEventListener('keydown', close);
     };
-  }, [accountMenu]);
+  }, [accountMenu, profileMenu]);
+  const endSession = async () => {
+    setProfileMenu(false);
+    sessionStorage.removeItem('northstar-workspace-entered');
+    try {
+      await Promise.race([
+        fetch('/cdn-cgi/access/logout', { credentials: 'include', cache: 'no-store', redirect: 'manual' }),
+        new Promise(resolve => window.setTimeout(resolve, 1400)),
+      ]);
+    } catch {
+      // Public/local development does not expose a Cloudflare Access session.
+    }
+    window.location.reload();
+  };
+  const initials = (identity?.name || identity?.email || 'ET').split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase();
   return <aside className={`sidebar ${open ? 'open' : ''}`}>
-    <div className="logo"><span><Sparkles size={17} /></span><div>EdgeTrader<small>TRADING INTELLIGENCE</small></div></div>
-    <div className="nav-label">Workspace</div>
+    <div className="sidebar-brand-row"><div className="logo"><span><Sparkles size={17} /></span><div>EdgeTrader<small>TRADING INTELLIGENCE</small></div></div><button className="sidebar-toggle" onClick={onToggleNavigation} aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}><Menu size={18} /></button></div>
     <nav>{NAV.map(([id, Icon, label]) => <button key={id} className={page === id ? 'active' : ''} onClick={() => go(id)} title={label} aria-label={label}><Icon size={18} /><span>{label}</span>{page === id && <i />}</button>)}</nav>
     <div className="sidebar-spacer" />
     <div className={`system-chip sync-${syncStatus}`}><i /> {syncStatus === 'saving' ? 'Saving to D1…' : syncStatus === 'synced' ? 'D1 cloud synced' : 'Cloud sync paused'}</div>
     <div className="account-switcher" ref={accountMenuRef}>
-      <button className="account-switcher-trigger" onClick={() => setAccountMenu(current => !current)} aria-expanded={accountMenu}>
+      <button className="account-switcher-trigger" onClick={() => { setProfileMenu(false); setAccountMenu(current => !current); }} aria-expanded={accountMenu}>
         <span><WalletCards size={17} /></span><div><b>{activeAccount.name}</b><small>{activeAccount.broker} · {activeAccount.type}</small></div><ChevronDown size={15} />
       </button>
       {accountMenu && <div className="account-menu">
@@ -233,34 +254,22 @@ function Sidebar({ page, go, open, accounts, activeAccount, identity, syncStatus
           {accounts.length > 1 && <button className="account-delete" onClick={() => { if (window.confirm(`Delete ${account.name} and all saved data for it?`)) onDeleteAccount(account.id); }} aria-label={`Delete ${account.name}`}><Trash2 size={13} /></button>}
         </div>)}</div>
         <button className="account-add" onClick={() => { setAccountMenu(false); onAddAccount(); }}><Plus size={14} /> Create trading account</button>
-        <button className="cloudflare-logout" type="button" onClick={async () => {
-          setAccountMenu(false);
-          sessionStorage.removeItem('northstar-workspace-entered');
-          try {
-            await Promise.race([
-              fetch('/cdn-cgi/access/logout', { credentials: 'include', cache: 'no-store', redirect: 'manual' }),
-              new Promise(resolve => window.setTimeout(resolve, 1400)),
-            ]);
-          } catch {
-            // Public deployments may not have Cloudflare Access enabled.
-          }
-          window.location.reload();
-        }}>End Cloudflare session <ShieldCheck size={13} /></button>
       </div>}
     </div>
-    <div className="user-card"><span>{identity?.email?.slice(0, 2).toUpperCase() || 'ET'}</span><div><b>{identity?.name || 'EdgeTrader'}</b><small title={identity?.email}>{identity?.email || 'Cloudflare Access'}</small></div></div>
+    <div className="profile-menu-wrap" ref={profileMenuRef}><button className="user-card" onClick={() => { setAccountMenu(false); setProfileMenu(current => !current); }} aria-expanded={profileMenu}><span>{initials || 'ET'}</span><div><b>{identity?.name || 'EdgeTrader user'}</b><small title={identity?.email}>{identity?.email || 'Cloudflare Access'}</small></div><ChevronDown size={14} /></button>{profileMenu && <section className="profile-menu"><header><span>{initials || 'ET'}</span><div><small>CLOUDFLARE PROFILE</small><b>{identity?.name || 'EdgeTrader user'}</b><p>{identity?.email || 'Cloudflare Access identity'}</p></div></header><div className="profile-detail"><UserRound size={15} /><span><small>Profile</small><b>Cloudflare account member</b></span></div><div className="profile-detail"><BadgeCheck size={15} /><span><small>Workspace</small><b>D1 cloud sync active</b></span></div><button className="profile-logout" type="button" onClick={endSession}><LogOut size={15} /> Log out of Cloudflare session</button></section>}</div>
   </aside>;
 }
 
-function Topbar({ page, onMenu, onNewTrade, theme, onTheme, navCollapsed, data, totalPnl, activeAccount }) {
+function Topbar({ page, onNewTrade, theme, onTheme, data, totalPnl, activeAccount, syncStatus, lastSyncedAt, onSync }) {
   const [title, eyebrow] = TITLES[page];
   const openPnl = 0;
   const balance = Number(data.settings.startingBalance || 0) + totalPnl;
   const equity = balance + openPnl;
-  return <header className="topbar"><button className="menu-button" onClick={onMenu} aria-label={navCollapsed ? 'Open navigation' : 'Toggle navigation'} title={navCollapsed ? 'Open navigation' : 'Toggle navigation'}><Menu size={20} /></button><div className="topbar-title"><p>{eyebrow}</p><h1>{title}</h1><span className="topbar-account"><WalletCards size={12} /> {activeAccount.name}</span></div><div className="top-actions"><div className="today"><CalendarDays size={15} />{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div><button className="round-button theme-toggle" onClick={onTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>{theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}</button><button className="primary-button" onClick={onNewTrade}><Plus size={16} /> Log trade</button></div><div className="account-strip" aria-label="Account status"><div><span>BALANCE</span><b>{plainMoney(balance)}</b></div><div><span>OPEN P&amp;L</span><b className="positive">{money(openPnl)}</b></div><div><span>EQUITY</span><b>{plainMoney(equity)}</b></div></div></header>;
+  const syncLabel = syncStatus === 'saving' ? 'Syncing…' : lastSyncedAt ? `Synced ${new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Sync D1';
+  return <header className="topbar"><div className="topbar-title">{eyebrow && <p>{eyebrow}</p>}<h1>{title}</h1><span className="topbar-account"><WalletCards size={12} /> {activeAccount.name}</span></div><div className="top-actions"><button className={`d1-sync-button ${syncStatus}`} onClick={onSync} disabled={syncStatus === 'saving'} title="Save this account workspace to Cloudflare D1"><Cloud size={13} /><span>{syncLabel}</span><RefreshCw size={11} className={syncStatus === 'saving' ? 'spinning' : ''} /></button><div className="today"><CalendarDays size={15} />{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div><button className="round-button theme-toggle" onClick={onTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>{theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}</button><button className="primary-button trade-button" onClick={onNewTrade}><Plus size={16} /> Log trade</button></div><div className="account-strip" aria-label="Account status"><div><span>BALANCE</span><b>{plainMoney(balance)}</b></div><div><span>OPEN P&amp;L</span><b className="positive">{money(openPnl)}</b></div><div><span>EQUITY</span><b>{plainMoney(equity)}</b></div></div></header>;
 }
 
-function Dashboard({ data, totalPnl, todayPnl, todayTrades, activePlan, go, theme }) {
+function Dashboard({ data, totalPnl, todayPnl, todayTrades, activePlan, go, theme, onCheckIn }) {
   const wins = data.trades.filter(t => t.pnl > 0), losses = data.trades.filter(t => t.pnl < 0), winRate = data.trades.length ? wins.length / data.trades.length * 100 : null;
   const grossWin = wins.reduce((s, t) => s + t.pnl, 0), grossLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
   const cards = [
@@ -272,7 +281,7 @@ function Dashboard({ data, totalPnl, todayPnl, todayTrades, activePlan, go, them
   return <div className="page-stack">
     <section className="command-banner"><div><div className="live-badge"><span /> Session controls active</div><h2>Trade the process. <em>Let results follow.</em></h2><p>Preparation, execution and review—one disciplined loop.</p></div><div className="command-side"><div><span>ACTIVE PLAYBOOK</span><b>{activePlan?.name || 'None selected'}</b><small>{activePlan ? activePlan.market : 'Select a process before your next session'}</small></div><button onClick={() => go(activePlan ? 'premarket' : 'plans')}>{activePlan ? 'Open routine' : 'Choose playbook'} <ArrowUpRight size={14} /></button></div></section>
     <div className="stats-grid">{cards.map(([label, value, Icon, tone, help]) => <article className="stat-card" key={label}><div><span>{label}</span><i className={tone}><Icon size={17} /></i></div><strong className={label.includes('P&L') || label === 'Today' ? (value.includes('−') ? 'negative' : 'positive') : ''}>{value}</strong><small>{help}</small></article>)}</div>
-    <div className="dashboard-grid"><EquityPanel trades={data.trades} start={data.settings.startingBalance} theme={theme} /><GuardrailPanel data={data} todayTrades={todayTrades} todayPnl={todayPnl} go={go} /></div>
+    <div className="dashboard-grid"><EquityPanel trades={data.trades} start={data.settings.startingBalance} theme={theme} /><GuardrailPanel data={data} todayTrades={todayTrades} todayPnl={todayPnl} go={go} onCheckIn={onCheckIn} /></div>
     <RecentTrades trades={data.trades.slice(0, 5)} go={go} />
   </div>;
 }
@@ -287,18 +296,23 @@ function EquityPanel({ trades, start, theme }) {
   return <section className="surface equity-surface"><SectionTitle eyebrow="ACCOUNT GROWTH" title="Equity curve" action="All time" />{trades.length ? <ReactECharts option={option} style={{ height: 180 }} /> : <EmptyState icon={TrendingUp} title="Your equity curve starts here" text="Log your first completed trade to begin tracking account growth." />}</section>;
 }
 
-function GuardrailPanel({ data, todayTrades, todayPnl, go }) {
+function GuardrailPanel({ data, todayTrades, todayPnl, go, onCheckIn }) {
   const today = localDateKey(new Date());
   const acknowledgedCheckIn = (data.sessions || []).find(session => (session.status === 'acknowledged' || session.acknowledgedAt) && localDateKey(session.acknowledgedAt || session.completedAt) === today);
   const preparationComplete = Boolean(acknowledgedCheckIn || data.routine.complete);
+  const maxDailyLoss = Math.max(0, Number(data.settings.maxDailyLoss) || 0);
+  const lossUsed = Math.max(0, -todayPnl);
+  const lossPercent = maxDailyLoss ? Math.min(100, lossUsed / maxDailyLoss * 100) : 0;
+  const maxTrades = Math.max(0, Number(data.settings.maxTrades) || 0);
+  const tradePercent = maxTrades ? Math.min(100, todayTrades.length / maxTrades * 100) : 0;
   const items = [
-    ['Daily loss', `${plainMoney(Math.max(0, data.settings.maxDailyLoss + Math.min(0, todayPnl)))} remaining`, todayPnl <= -data.settings.maxDailyLoss],
-    ['Trade limit', `${todayTrades.length} of ${data.settings.maxTrades} used`, todayTrades.length >= data.settings.maxTrades],
+    ['Daily loss', maxDailyLoss ? `${plainMoney(Math.max(0, maxDailyLoss + Math.min(0, todayPnl)))} remaining` : 'Set a daily loss limit', !maxDailyLoss || todayPnl <= -maxDailyLoss],
+    ['Trade limit', maxTrades ? `${todayTrades.length} of ${maxTrades} used` : 'Set a daily trade limit', !maxTrades || todayTrades.length >= maxTrades],
     ['Session check-in', acknowledgedCheckIn ? 'Elefin check-in acknowledged' : preparationComplete ? 'Legacy routine completed' : 'Check-in required', !preparationComplete],
     ['Active plan', data.plans.some(p => p.active) ? data.plans.find(p => p.active).name : 'No playbook selected', !data.plans.some(p => p.active)],
   ];
   const ready = items.filter(([, , warning]) => !warning).length;
-  return <section className="surface guard-surface"><header className="control-header"><div><p>RISK ENGINE</p><h2>Live controls</h2></div><button onClick={() => go('settings')}>Settings <ArrowUpRight size={13} /></button></header><div className="control-readiness"><span><i /> SYSTEM STATUS</span><b>{ready}/{items.length} ready</b></div><div className="guard-list">{items.map(([name, detail, warning]) => <div className={warning ? 'warning' : 'ready'} key={name}><span>{warning ? '!' : <Check size={12} />}</span><div><b>{name}</b><small>{detail}</small></div><em>{warning ? 'Review' : 'Ready'}</em></div>)}</div></section>;
+  return <section className="surface guard-surface"><header className="control-header"><div><p>RISK ENGINE</p><h2>Live controls</h2></div><button onClick={() => go('settings')}>Edit limits <ArrowUpRight size={13} /></button></header><div className="control-readiness"><span><i /> SYSTEM STATUS</span><b>{ready}/{items.length} ready</b></div><div className="risk-usage"><article><div><span>Daily loss</span><b>{plainMoney(lossUsed)} / {maxDailyLoss ? plainMoney(maxDailyLoss) : 'Not set'}</b></div><i><u className={lossPercent >= 80 ? 'danger' : ''} style={{ width: `${lossPercent}%` }} /></i><small>{maxDailyLoss ? `${Math.round(lossPercent)}% used` : 'Configure limit'}</small></article><article><div><span>Trade limit</span><b>{todayTrades.length} / {maxTrades || 'Not set'}</b></div><i><u className={tradePercent >= 80 ? 'danger' : ''} style={{ width: `${tradePercent}%` }} /></i><small>{maxTrades ? `${Math.round(tradePercent)}% used` : 'Configure limit'}</small></article></div><div className="guard-list">{items.map(([name, detail, warning]) => <div className={warning ? 'warning' : 'ready'} key={name}><span>{warning ? '!' : <Check size={12} />}</span><div><b>{name}</b><small>{detail}</small></div>{name === 'Session check-in' && !acknowledgedCheckIn ? <button className="guard-action" onClick={onCheckIn}>Check in</button> : <em>{warning ? 'Review' : 'Ready'}</em>}</div>)}</div></section>;
 }
 
 function RecentTrades({ trades, go }) {
@@ -352,7 +366,7 @@ function Journal({ trades, sessions, onAdd, onReview, onDelete }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const filtered = trades.filter(t => `${t.symbol} ${t.setup} ${t.emotion}`.toLowerCase().includes(query.toLowerCase()));
   const addFromDay = date => { setSelectedDate(null); onAdd(date); };
-  return <div className="page-stack journal-workspace"><div className="journal-grid"><JournalCalendar trades={trades} sessions={sessions} month={month} setMonth={setMonth} onSelect={setSelectedDate} /><JournalInsight trades={trades} /></div><section className="surface journal-list"><div className="section-toolbar"><SectionTitle eyebrow="Trade archive" title={`${trades.length} journal entries`} /><div className="search-box"><Search size={15} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search setup, market or emotion" /></div></div>{filtered.length ? <div className="table-scroll"><table><thead><tr><th>Instrument</th><th>Date</th><th>Setup</th><th>Side</th><th>Grade</th><th>Evidence</th><th>Net result</th><th></th></tr></thead><tbody>{filtered.map(t => <tr key={t.id}><td><Instrument symbol={t.symbol} /></td><td>{new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}</td><td><div className="setup-cell"><b>{t.setup || '—'}</b><small>{t.management || t.note || 'Review not added'}</small></div></td><td className={t.side === 'buy' ? 'positive' : 'negative'}>{t.side === 'buy' ? 'Long' : 'Short'}</td><td><span className="grade">{t.grade || '—'}</span></td><td>{t.images?.length ? <span className="evidence-count"><Camera size={12} /> {t.images.length}</span> : <span className="no-evidence">—</span>}</td><td className={t.pnl >= 0 ? 'positive' : 'negative'}><b>{money(t.pnl)}</b></td><td className="row-actions"><button onClick={() => onReview(t)}><Pencil size={12} /> Edit trade</button><button className="icon-danger" onClick={() => onDelete(t.id)}><Trash2 size={14} /></button></td></tr>)}</tbody></table></div> : <EmptyState icon={BookOpen} title="No matching journal entries" text={trades.length ? 'Change your search to see more trades.' : 'Your journal is empty. Click a calendar date to add your first real trade.'} />}</section>{selectedDate && <JournalDayPanel date={selectedDate} trades={trades} sessions={sessions} onClose={() => setSelectedDate(null)} onAdd={addFromDay} />}</div>;
+  return <div className="page-stack journal-workspace"><div className="journal-grid"><JournalCalendar trades={trades} sessions={sessions} month={month} setMonth={setMonth} onSelect={setSelectedDate} /><JournalInsight trades={trades} /></div><section className="surface journal-list"><div className="section-toolbar"><SectionTitle eyebrow="Trade archive" title={`${trades.length} journal entries`} /><div className="search-box"><Search size={15} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search setup, market or emotion" /></div></div>{filtered.length ? <div className="table-scroll"><table><thead><tr><th>Instrument</th><th>Date</th><th>Setup</th><th>Side</th><th>Grade</th><th>Evidence</th><th>Net result</th><th>Review</th></tr></thead><tbody>{filtered.map(t => { const reviewed = Boolean(t.note || t.management || t.mistakes || t.images?.length); return <tr key={t.id}><td><Instrument symbol={t.symbol} /></td><td>{new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}</td><td><div className="setup-cell"><b>{t.setup || '—'}</b><small>{t.management || t.note || 'Review not added'}</small></div></td><td className={t.side === 'buy' ? 'positive' : 'negative'}>{t.side === 'buy' ? 'Long' : 'Short'}</td><td><span className="grade">{t.grade || '—'}</span></td><td>{t.images?.length ? <span className="evidence-count"><Camera size={12} /> {t.images.length}</span> : <span className="no-evidence">—</span>}</td><td className={t.pnl >= 0 ? 'positive' : 'negative'}><b>{money(t.pnl)}</b></td><td className="row-actions"><button className="review-action" onClick={() => onReview(t)}><ClipboardCheck size={12} /> {reviewed ? 'Edit review' : 'Add review'}</button><button className="edit-trade-action" onClick={() => onReview(t)} title="Edit saved trade" aria-label="Edit saved trade"><Pencil size={13} /></button><button className="icon-danger" onClick={() => onDelete(t.id)} title="Delete trade" aria-label="Delete trade"><Trash2 size={14} /></button></td></tr>; })}</tbody></table></div> : <EmptyState icon={BookOpen} title="No matching journal entries" text={trades.length ? 'Change your search to see more trades.' : 'Your journal is empty. Click a calendar date to add your first real trade.'} />}</section>{selectedDate && <JournalDayPanel date={selectedDate} trades={trades} sessions={sessions} onClose={() => setSelectedDate(null)} onAdd={addFromDay} onReview={onReview} onDelete={onDelete} />}</div>;
 }
 
 function JournalCalendar({ trades, sessions, month, setMonth, onSelect }) {
@@ -362,15 +376,18 @@ function JournalCalendar({ trades, sessions, month, setMonth, onSelect }) {
   return <section className="surface calendar-card"><div className="calendar-head"><div><p>MONTHLY PERFORMANCE</p><h2>{month.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</h2><small>Click any date to open its complete trading memory</small></div><div><button onClick={() => setMonth(new Date(year, m - 1, 1))} aria-label="Previous month">←</button><button onClick={() => setMonth(new Date(year, m + 1, 1))} aria-label="Next month">→</button></div></div><div className="week-labels">{['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map(d => <span key={d}>{d}</span>)}</div><div className="calendar-days">{Array.from({ length: first + count }, (_, i) => { const day = i - first + 1, result = byDay[day], sessionCount = sessionsByDay[day] || 0, today = new Date(), isCurrentDay = today.getFullYear() === year && today.getMonth() === m && today.getDate() === day; return day < 1 ? <div className="calendar-blank" key={i} /> : <button type="button" key={i} className={`calendar-day ${result ? (result.pnl >= 0 ? 'win-day' : 'loss-day') : ''} ${sessionCount ? 'has-session' : ''} ${isCurrentDay ? 'today-date' : ''}`} onClick={() => onSelect(new Date(year, m, day, 12))} aria-label={`Open trading memory for ${month.toLocaleString('en-US', { month: 'long' })} ${day}, ${year}`}><span>{day}</span>{isCurrentDay && <u className="today-marker">TODAY</u>}<i><ChevronRight size={13} /></i>{sessionCount > 0 && <mark><ShieldCheck size={10} />{sessionCount}</mark>}{result ? <><b>{money(result.pnl)}</b><small>{result.count} trade{result.count !== 1 && 's'}</small></> : <em>View day</em>}</button>; })}</div></section>;
 }
 
-function JournalDayPanel({ date, trades, sessions, onClose, onAdd }) {
+function JournalDayPanel({ date, trades, sessions, onClose, onAdd, onReview, onDelete }) {
   const key = localDateKey(date);
   const dayTrades = trades.filter(trade => localDateKey(trade.date) === key).sort((a, b) => b.date.localeCompare(a.date));
   const daySessions = sessions.filter(session => localDateKey(session.acknowledgedAt || session.completedAt) === key).sort((a, b) => (b.acknowledgedAt || b.completedAt).localeCompare(a.acknowledgedAt || a.completedAt));
   const pnl = dayTrades.reduce((sum, trade) => sum + trade.pnl, 0);
   const wins = dayTrades.filter(trade => trade.pnl > 0).length;
   const addTrade = () => { const now = new Date(); onAdd(new Date(date.getFullYear(), date.getMonth(), date.getDate(), now.getHours(), now.getMinutes())); };
+  const deleteTrade = trade => {
+    if (window.confirm(`Delete ${INSTRUMENTS[trade.symbol]?.label || trade.symbol} · ${trade.setup || 'trade'} from this day? This cannot be undone.`)) onDelete(trade.id);
+  };
   useEffect(() => { const close = event => event.key === 'Escape' && onClose(); window.addEventListener('keydown', close); return () => window.removeEventListener('keydown', close); }, [onClose]);
-  return <div className="day-panel-backdrop" onMouseDown={event => event.target === event.currentTarget && onClose()}><aside className="journal-day-panel" role="dialog" aria-modal="true" aria-label={`Trading memory for ${date.toLocaleDateString()}`}><header><div><p>TRADING MEMORY</p><h2>{date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h2><span>{date.getFullYear()}</span></div><button onClick={onClose} aria-label="Close day details"><X size={18} /></button></header><div className="day-summary"><article><span>NET P&amp;L</span><b className={pnl >= 0 ? 'positive' : 'negative'}>{dayTrades.length ? money(pnl) : '—'}</b></article><article><span>TRADES</span><b>{dayTrades.length}</b></article><article><span>WIN RATE</span><b>{dayTrades.length ? `${(wins / dayTrades.length * 100).toFixed(0)}%` : '—'}</b></article><article><span>CHECK-INS</span><b>{daySessions.length}</b></article></div><div className="day-panel-scroll"><section className="day-memory-section"><div className="day-section-title"><div><p>PRE-CHECK MEMORY</p><h3>Trading sessions</h3></div><span>{daySessions.length}</span></div>{daySessions.length ? daySessions.map(session => <article className="saved-session-card" key={session.id}><div className="saved-session-head"><div><span className="status-dot" /> <b>Acknowledged session</b><small>{new Date(session.acknowledgedAt || session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></div><mark>{session.emotion}</mark></div><div className="saved-checks">{session.answers.map((answer, index) => <div key={`${session.id}-${index}`}><span className={answer.result}><i>{answer.result === 'green' ? <Check size={11} /> : <X size={11} />}</i><b>Q{index + 1}</b></span><div><strong>{answer.question}</strong><small>{answer.note || 'No context note added.'}</small></div></div>)}</div></article>) : <div className="day-empty"><ClipboardCheck size={19} /><div><b>No acknowledged pre-check</b><span>Complete and acknowledge an Elefin check-in to attach it here.</span></div></div>}</section><section className="day-memory-section"><div className="day-section-title"><div><p>EXECUTION RESULTS</p><h3>Journal trades</h3></div><span>{dayTrades.length}</span></div>{dayTrades.length ? <div className="day-trade-list">{dayTrades.map(trade => <article key={trade.id}><Instrument symbol={trade.symbol} /><div><b>{trade.setup || 'Unlabelled setup'}</b><small>{trade.side === 'buy' ? 'Long' : 'Short'} · {trade.emotion || 'No emotion'} · Grade {trade.grade || '—'}</small></div><strong className={trade.pnl >= 0 ? 'positive' : 'negative'}>{money(trade.pnl)}</strong></article>)}</div> : <div className="day-empty"><BookOpen size={19} /><div><b>No trades logged</b><span>Add a real journal trade for this date to update the summary and analytics.</span></div></div>}</section></div><footer><button type="button" className="secondary-button" onClick={onClose}>Close</button><button type="button" className="primary-button" onClick={addTrade}><Plus size={15} /> Add trade for this date</button></footer></aside></div>;
+  return <div className="day-panel-backdrop" onMouseDown={event => event.target === event.currentTarget && onClose()}><aside className="journal-day-panel" role="dialog" aria-modal="true" aria-label={`Trading memory for ${date.toLocaleDateString()}`}><header><div><p>TRADING MEMORY</p><h2>{date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h2><span>{date.getFullYear()}</span></div><div className="day-panel-header-actions"><button type="button" className="secondary-button" onClick={onClose}>Close</button><button type="button" className="primary-button" onClick={addTrade}><Plus size={15} /> Add trade</button></div></header><div className="day-summary"><article><span>NET P&amp;L</span><b className={pnl >= 0 ? 'positive' : 'negative'}>{dayTrades.length ? money(pnl) : '—'}</b></article><article><span>TRADES</span><b>{dayTrades.length}</b></article><article><span>WIN RATE</span><b>{dayTrades.length ? `${(wins / dayTrades.length * 100).toFixed(0)}%` : '—'}</b></article><article><span>CHECK-INS</span><b>{daySessions.length}</b></article></div><div className="day-panel-scroll"><section className="day-memory-section"><div className="day-section-title"><div><p>PRE-CHECK MEMORY</p><h3>Trading sessions</h3></div><span>{daySessions.length}</span></div>{daySessions.length ? daySessions.map(session => <article className="saved-session-card" key={session.id}><div className="saved-session-head"><div><span className="status-dot" /> <b>Acknowledged session</b><small>{new Date(session.acknowledgedAt || session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small></div><mark>{session.emotion}</mark></div><div className="saved-checks">{session.answers.map((answer, index) => <div key={`${session.id}-${index}`}><span className={answer.result}><i>{answer.result === 'green' ? <Check size={11} /> : <X size={11} />}</i><b>Q{index + 1}</b></span><div><strong>{answer.question}</strong><small>{answer.note || 'No context note added.'}</small></div></div>)}</div></article>) : <div className="day-empty"><ClipboardCheck size={19} /><div><b>No acknowledged pre-check</b><span>Complete and acknowledge an Elefin check-in to attach it here.</span></div></div>}</section><section className="day-memory-section"><div className="day-section-title"><div><p>EXECUTION RESULTS</p><h3>Journal trades</h3></div><span>{dayTrades.length}</span></div>{dayTrades.length ? <div className="day-trade-list">{dayTrades.map(trade => <article key={trade.id}><Instrument symbol={trade.symbol} /><div><b>{trade.setup || 'Unlabelled setup'}</b><small>{trade.side === 'buy' ? 'Long' : 'Short'} · {trade.emotion || 'No emotion'} · Grade {trade.grade || '—'}</small></div><strong className={trade.pnl >= 0 ? 'positive' : 'negative'}>{money(trade.pnl)}</strong><div className="day-trade-actions"><button className="day-review-action" onClick={() => { onClose(); onReview(trade); }}><ClipboardCheck size={12} /> {trade.note || trade.management ? 'Edit review' : 'Add review'}</button><button className="day-delete-action" onClick={() => deleteTrade(trade)} title="Delete this trade" aria-label={`Delete ${trade.setup || 'trade'}`}><Trash2 size={13} /></button></div></article>)}</div> : <div className="day-empty"><BookOpen size={19} /><div><b>No trades logged</b><span>Add a real journal trade for this date to update the summary and analytics.</span></div></div>}</section></div></aside></div>;
 }
 
 function JournalInsight({ trades }) {
@@ -384,10 +401,17 @@ function Analytics({ trades, sessions, theme }) {
   const wins = trades.filter(t => t.pnl > 0), losses = trades.filter(t => t.pnl < 0), grossWin = wins.reduce((s, t) => s + t.pnl, 0), grossLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
   const expectancy = trades.length ? trades.reduce((s, t) => s + t.pnl, 0) / trades.length : null;
   let equity = 0, peak = 0, maxDrawdown = 0; [...trades].sort((a, b) => a.date.localeCompare(b.date)).forEach(t => { equity += t.pnl; peak = Math.max(peak, equity); maxDrawdown = Math.max(maxDrawdown, peak - equity); });
-  const metrics = [['Net P&L', money(equity)], ['Profit factor', grossLoss ? (grossWin / grossLoss).toFixed(2) : '—'], ['Expectancy', expectancy === null ? '—' : money(expectancy)], ['Avg. winner', wins.length ? money(grossWin / wins.length) : '—'], ['Max drawdown', trades.length ? `−${plainMoney(maxDrawdown)}` : '—']];
+  const profitFactor = grossLoss ? grossWin / grossLoss : null;
+  const metrics = [
+    ['Net P&L', money(equity), equity >= 0 ? 'gain' : 'loss'],
+    ['Profit factor', profitFactor === null ? '—' : profitFactor.toFixed(2), profitFactor === null ? 'neutral' : profitFactor >= 1 ? 'gain' : 'loss'],
+    ['Expectancy', expectancy === null ? '—' : money(expectancy), expectancy === null ? 'neutral' : expectancy >= 0 ? 'gain' : 'loss'],
+    ['Avg. winner', wins.length ? money(grossWin / wins.length) : '—', wins.length ? 'gain' : 'neutral'],
+    ['Max drawdown', trades.length ? `−${plainMoney(maxDrawdown)}` : '—', trades.length && maxDrawdown > 0 ? 'loss' : 'neutral'],
+  ];
   const bySetup = trades.reduce((map, t) => { const key = t.setup || 'Unlabelled'; map[key] ||= { value: 0, count: 0 }; map[key].value += t.pnl; map[key].count++; return map; }, {});
   const byEmotion = trades.reduce((map, t) => { const key = t.emotion || 'Unlabelled'; map[key] ||= { value: 0, count: 0 }; map[key].value += t.pnl; map[key].count++; return map; }, {});
-  return <div className="page-stack"><div className="page-intro"><div><p>PERFORMANCE INTELLIGENCE</p><h2>Know exactly where your edge lives.</h2><span>Journal trades and acknowledged pre-checks update these insights automatically.</span></div></div><div className="analytics-metrics">{metrics.map(([label, value]) => <article className="surface" key={label}><span>{label}</span><b>{value}</b></article>)}</div><PerformanceCharts trades={trades} theme={theme} /><SessionAnalytics sessions={sessions} trades={trades} theme={theme} /><div className="analytics-grid"><Breakdown title="Performance by setup" eyebrow="PLAYBOOK" data={bySetup} theme={theme} /><Breakdown title="Performance by emotion" eyebrow="PSYCHOLOGY" data={byEmotion} theme={theme} /><PlanImpact trades={trades} /><DayPerformance trades={trades} /></div></div>;
+  return <div className="page-stack"><div className="page-intro"><div><p>PERFORMANCE INTELLIGENCE</p><h2>Know exactly where your edge lives.</h2><span>Journal trades and acknowledged pre-checks update these insights automatically.</span></div></div><div className="analytics-metrics">{metrics.map(([label, value, tone]) => <article className={`surface analytics-metric ${tone}`} key={label}><span>{label}</span><b>{value}</b><i /></article>)}</div><PerformanceCharts trades={trades} theme={theme} /><SessionAnalytics sessions={sessions} trades={trades} theme={theme} /><div className="analytics-grid"><Breakdown title="Performance by setup" eyebrow="PLAYBOOK" data={bySetup} theme={theme} /><Breakdown title="Performance by emotion" eyebrow="PSYCHOLOGY" data={byEmotion} theme={theme} /><PlanImpact trades={trades} /><DayPerformance trades={trades} /></div></div>;
 }
 
 function PerformanceCharts({ trades, theme }) {
@@ -538,7 +562,7 @@ function Plans({ plans, patch, onAdd, onEdit }) {
 }
 
 function PlaybookFlow({ steps, compact = false }) {
-  return <div className={`playbook-flow ${compact ? 'compact' : ''}`}>{steps.map((step, index) => <React.Fragment key={step.id || `${step.type}-${index}`}><div className={`flow-node type-${String(step.type || 'step').toLowerCase()}`}><span>{String(index + 1).padStart(2, '0')}</span><div><small>{step.type || 'Step'}</small><b>{step.text?.trim() || 'Define this step'}</b></div></div>{index < steps.length - 1 && <div className="flow-connector"><i /><ChevronDown size={13} /></div>}</React.Fragment>)}</div>;
+  return <div className={`playbook-flow ${compact ? 'compact' : ''}`}>{steps.map((step, index) => <React.Fragment key={step.id || `${step.type}-${index}`}><div className={`flow-node type-${String(step.type || 'step').toLowerCase()}`}><span>{String(index + 1).padStart(2, '0')}</span><div><small>{[step.scope, step.type || 'Step'].filter(Boolean).join(' · ')}</small><b>{step.text?.trim() || 'Define this step'}</b></div></div>{index < steps.length - 1 && <div className="flow-connector"><i /><ChevronDown size={13} /></div>}</React.Fragment>)}</div>;
 }
 
 function RiskSettings({ settings, patch, account, identity, syncStatus }) {
@@ -555,22 +579,45 @@ function TradeModal({ plans, initialDate, onClose, onSave }) {
 }
 
 function PlanModal({ initialPlan, onClose, onSave }) {
-  const makeStep = (type = 'Confirmation') => ({ id: uid(), type, text: '' });
-  const [name, setName] = useState(initialPlan?.name || ''), [market, setMarket] = useState(initialPlan?.market || ''), [entryModel, setEntryModel] = useState(initialPlan?.entryModel || ''), [entryCriteria, setEntryCriteria] = useState((initialPlan?.entryCriteria || []).join('\n')), [managementRules, setManagementRules] = useState((initialPlan?.managementRules || []).join('\n')), [exitCriteria, setExitCriteria] = useState((initialPlan?.exitCriteria || []).join('\n')), [images, setImages] = useState(initialPlan?.images || []), [steps, setSteps] = useState(() => initialPlan?.flow?.length ? initialPlan.flow.map(step => ({ ...step })) : [makeStep('Context'), makeStep('Trigger'), makeStep('Entry')]), [error, setError] = useState('');
+  const makeStep = (type = 'Confirmation', scope = 'STF') => ({ id: uid(), type, scope, text: '' });
+  const originalFlow = initialPlan?.flow || [];
+  const existingEvidence = initialPlan?.timeframeImages || {};
+  const initialEvidence = FLOW_SCOPES.reduce((result, scope) => {
+    result[scope] = Array.isArray(existingEvidence[scope]) ? existingEvidence[scope] : Object.entries(existingEvidence).filter(([key, value]) => key.startsWith(`${scope}:`) && Array.isArray(value)).flatMap(([, value]) => value);
+    return result;
+  }, {});
+  const [name, setName] = useState(initialPlan?.name || ''), [market, setMarket] = useState(initialPlan?.market || ''), [entryModel, setEntryModel] = useState(initialPlan?.entryModel || ''), [entryCriteria, setEntryCriteria] = useState((initialPlan?.entryCriteria || []).join('\n')), [managementRules, setManagementRules] = useState((initialPlan?.managementRules || []).join('\n')), [exitCriteria, setExitCriteria] = useState((initialPlan?.exitCriteria || []).join('\n')), [images, setImages] = useState(initialPlan?.images || []), [steps, setSteps] = useState(() => originalFlow.length ? originalFlow.map((step, index) => { const { timeframe, ...savedStep } = step; return { ...savedStep, scope: step.scope || (index === 0 ? 'HTF' : index === originalFlow.length - 1 ? 'STF' : 'MTF') }; }) : [makeStep('Context', 'HTF'), makeStep('Trigger', 'MTF'), makeStep('Entry', 'STF')]), [flowScope, setFlowScope] = useState('HTF'), [error, setError] = useState('');
+  const [timeframeImages, setTimeframeImages] = useState(initialEvidence);
+  const visibleSteps = steps.filter(step => step.scope === flowScope);
   const updateStep = (id, changes) => setSteps(current => current.map(step => step.id === id ? { ...step, ...changes } : step));
-  const moveStep = (index, direction) => setSteps(current => { const target = index + direction; if (target < 0 || target >= current.length) return current; const next = [...current]; [next[index], next[target]] = [next[target], next[index]]; return next; });
+  const moveStep = (id, direction) => setSteps(current => {
+    const visibleIds = current.filter(step => step.scope === flowScope).map(step => step.id);
+    const visibleIndex = visibleIds.indexOf(id), targetId = visibleIds[visibleIndex + direction];
+    if (!targetId) return current;
+    const index = current.findIndex(step => step.id === id), target = current.findIndex(step => step.id === targetId), next = [...current];
+    [next[index], next[target]] = [next[target], next[index]];
+    return next;
+  });
+  const moveScopeStep = (scope, id, direction) => setSteps(current => {
+    const scopeIds = current.filter(step => step.scope === scope).map(step => step.id);
+    const scopeIndex = scopeIds.indexOf(id), targetId = scopeIds[scopeIndex + direction];
+    if (!targetId) return current;
+    const index = current.findIndex(step => step.id === id), target = current.findIndex(step => step.id === targetId), next = [...current];
+    [next[index], next[target]] = [next[target], next[index]];
+    return next;
+  });
   const removeStep = id => setSteps(current => current.length === 1 ? current : current.filter(step => step.id !== id));
   const submit = e => {
     e.preventDefault();
     const flow = steps.map(step => ({ ...step, text: step.text.trim() })).filter(step => step.text);
     const entries = listFromText(entryCriteria), management = listFromText(managementRules), exits = listFromText(exitCriteria);
     if (!name.trim() || !entryModel.trim() || !entries.length || !flow.length) return setError('Add a playbook name, entry model, entry criteria and at least one flow node.');
-    onSave({ ...initialPlan, id: initialPlan?.id || uid(), name: name.trim(), market: market.trim(), entryModel: entryModel.trim(), entryCriteria: entries, managementRules: management, exitCriteria: exits, images, flow, rules: flow.map(step => step.text), active: initialPlan?.active || false });
+    onSave({ ...initialPlan, id: initialPlan?.id || uid(), name: name.trim(), market: market.trim(), entryModel: entryModel.trim(), entryCriteria: entries, managementRules: management, exitCriteria: exits, images, timeframeImages, flow, timeframes: undefined, rules: flow.map(step => step.text), active: initialPlan?.active || false });
   };
-  return <Modal onClose={onClose} eyebrow={initialPlan ? 'Edit trade playbook' : 'New trade playbook'} title={initialPlan ? `Refine ${initialPlan.name}` : 'Define the full execution model'}><form className="playbook-flow-form" onSubmit={submit}><div className="flow-meta"><Field label="Playbook name"><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. London liquidity sweep" autoFocus /></Field><Field label="Market focus"><input value={market} onChange={e => setMarket(e.target.value)} placeholder="e.g. XAUUSD · London session" /></Field></div><section className="playbook-definition"><header><div><p>PLAYBOOK DEFINITION</p><h3>What must be true before, during and after entry</h3></div></header><div className="plan-definition-grid"><Field label="Entry model"><textarea value={entryModel} onChange={e => setEntryModel(e.target.value)} placeholder="Describe the market context, setup and trigger in plain language." /></Field><Field label="Entry criteria · one per line"><textarea value={entryCriteria} onChange={e => setEntryCriteria(e.target.value)} placeholder={'HTF bias aligned\nLiquidity sweep confirmed\n5m displacement closes'} /></Field><Field label="Trade management rules · one per line"><textarea value={managementRules} onChange={e => setManagementRules(e.target.value)} placeholder={'Partial 50% at 1R\nMove stop to break-even after 1R\nNo add-ons after first target'} /></Field><Field label="Exit criteria · one per line"><textarea value={exitCriteria} onChange={e => setExitCriteria(e.target.value)} placeholder={'Target opposing liquidity\nExit if structure invalidates\nClose before session end'} /></Field></div><ImageUploader images={images} onChange={setImages} title="Setup and entry examples" help="Upload every chart example needed to recognize and execute this playbook." /></section><div className="flow-builder-layout"><section className="flow-editor"><header><div><p>DECISION FLOW</p><h3>Build the execution sequence</h3></div><button type="button" onClick={() => setSteps(current => [...current, makeStep()])}><Plus size={13} /> Add node</button></header><div className="flow-step-editor-list">{steps.map((step, index) => <div className="flow-step-editor" key={step.id}><span>{String(index + 1).padStart(2, '0')}</span><select value={step.type} onChange={e => updateStep(step.id, { type: e.target.value })}>{FLOW_TYPES.map(type => <option key={type}>{type}</option>)}</select><input value={step.text} onChange={e => updateStep(step.id, { text: e.target.value })} placeholder="Describe the condition or action" /><div><button type="button" disabled={index === 0} onClick={() => moveStep(index, -1)} aria-label="Move node up">↑</button><button type="button" disabled={index === steps.length - 1} onClick={() => moveStep(index, 1)} aria-label="Move node down">↓</button><button type="button" disabled={steps.length === 1} onClick={() => removeStep(step.id)} aria-label="Delete node"><Trash2 size={12} /></button></div></div>)}</div></section><section className="flow-preview"><header><p>LIVE GRAPH</p><h3>Your trade flow</h3></header><PlaybookFlow steps={steps} /></section></div>{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">{initialPlan ? 'Save strategy changes' : 'Save complete playbook'}</button></div></form></Modal>;
+  return <Modal onClose={onClose} eyebrow={initialPlan ? 'Edit trade playbook' : 'New trade playbook'} title={initialPlan ? `Refine ${initialPlan.name}` : 'Define the full execution model'}><form className="playbook-flow-form" onSubmit={submit}><div className="flow-meta"><Field label="Playbook name"><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. London liquidity sweep" autoFocus /></Field><Field label="Market focus"><input value={market} onChange={e => setMarket(e.target.value)} placeholder="e.g. XAUUSD · London session" /></Field></div><section className="playbook-definition"><header><div><p>PLAYBOOK DEFINITION</p><h3>What must be true before, during and after entry</h3></div></header><div className="plan-definition-grid"><Field label="Entry model"><textarea value={entryModel} onChange={e => setEntryModel(e.target.value)} placeholder="Describe the market context, setup and trigger in plain language." /></Field><Field label="Entry criteria · one per line"><textarea value={entryCriteria} onChange={e => setEntryCriteria(e.target.value)} placeholder={'HTF bias aligned\nLiquidity sweep confirmed\n5m displacement closes'} /></Field><Field label="Trade management rules · one per line"><textarea value={managementRules} onChange={e => setManagementRules(e.target.value)} placeholder={'Partial 50% at 1R\nMove stop to break-even after 1R\nNo add-ons after first target'} /></Field><Field label="Exit criteria · one per line"><textarea value={exitCriteria} onChange={e => setExitCriteria(e.target.value)} placeholder={'Target opposing liquidity\nExit if structure invalidates\nClose before session end'} /></Field></div><ImageUploader images={images} onChange={setImages} title="Setup and entry examples" help="Upload every chart example needed to recognize and execute this playbook." /></section><section className="flow-filterbar"><div className="flow-link-map">{FLOW_SCOPES.map((scope, index) => <React.Fragment key={scope}><button type="button" className={flowScope === scope ? 'active' : ''} onClick={() => setFlowScope(scope)}><b>{scope}</b><small>{(timeframeImages[scope] || []).length} screenshot{(timeframeImages[scope] || []).length === 1 ? '' : 's'}</small></button>{index < FLOW_SCOPES.length - 1 && <ChevronRight size={14} />}</React.Fragment>)}</div><em>{visibleSteps.length} visible node{visibleSteps.length === 1 ? '' : 's'}</em></section><div className="flow-evidence-row">{FLOW_SCOPES.map(scope => <section className={`flow-timeframe-evidence ${flowScope === scope ? 'active' : ''}`} key={scope}><button type="button" className="flow-evidence-heading" onClick={() => setFlowScope(scope)}><span><b>{scope}</b><small>{steps.filter(step => step.scope === scope).length} flow node{steps.filter(step => step.scope === scope).length === 1 ? '' : 's'}</small></span><ChevronRight size={14} /></button><ImageUploader images={timeframeImages[scope] || []} onChange={nextImages => setTimeframeImages(current => ({ ...current, [scope]: nextImages }))} title={`${scope} chart`} help={`Add ${scope} structure evidence.`} /></section>)}</div><div className="flow-steps-row">{FLOW_SCOPES.map(scope => { const scopeSteps = steps.filter(step => step.scope === scope); return <section className="flow-layer-steps" key={scope}><header><div><p>{scope} STEPS</p><h3>{scope} execution path</h3></div><button type="button" onClick={() => setSteps(current => [...current, makeStep('Confirmation', scope)])}><Plus size={12} /> Add step</button></header><div className="flow-layer-step-list">{scopeSteps.length ? scopeSteps.map((step, index) => <div className="flow-layer-step" key={step.id}><span>{String(index + 1).padStart(2, '0')}</span><select value={step.type} onChange={e => updateStep(step.id, { type: e.target.value })}>{FLOW_TYPES.map(type => <option key={type}>{type}</option>)}</select><input value={step.text} onChange={e => updateStep(step.id, { text: e.target.value })} placeholder={`Add ${scope} condition or action`} /><div><button type="button" disabled={index === 0} onClick={() => moveScopeStep(scope, step.id, -1)} aria-label={`Move ${scope} step up`}>↑</button><button type="button" disabled={index === scopeSteps.length - 1} onClick={() => moveScopeStep(scope, step.id, 1)} aria-label={`Move ${scope} step down`}>↓</button><button type="button" disabled={steps.length === 1} onClick={() => removeStep(step.id)} aria-label={`Delete ${scope} step`}><Trash2 size={12} /></button></div></div>) : <div className="flow-filter-empty layer-empty"><Target size={16} /><b>No {scope} steps</b><span>Add the first condition for this layer.</span></div>}</div></section>; })}</div><div className="flow-builder-layout"><section className="flow-editor"><header><div><p>{flowScope}</p><h3>Build the execution sequence</h3></div><button type="button" onClick={() => setSteps(current => [...current, makeStep('Confirmation', flowScope)])}><Plus size={13} /> Add node</button></header><div className="flow-step-editor-list">{visibleSteps.length ? visibleSteps.map((step, index) => <div className="flow-step-editor" key={step.id}><span>{String(index + 1).padStart(2, '0')}</span><select value={step.type} onChange={e => updateStep(step.id, { type: e.target.value })}>{FLOW_TYPES.map(type => <option key={type}>{type}</option>)}</select><select value={step.scope} onChange={e => updateStep(step.id, { scope: e.target.value })}>{FLOW_SCOPES.map(scope => <option key={scope}>{scope}</option>)}</select><input value={step.text} onChange={e => updateStep(step.id, { text: e.target.value })} placeholder="Describe the condition or action" /><div><button type="button" disabled={index === 0} onClick={() => moveStep(step.id, -1)} aria-label="Move node up">↑</button><button type="button" disabled={index === visibleSteps.length - 1} onClick={() => moveStep(step.id, 1)} aria-label="Move node down">↓</button><button type="button" disabled={steps.length === 1} onClick={() => removeStep(step.id)} aria-label="Delete node"><Trash2 size={12} /></button></div></div>) : <div className="flow-filter-empty"><Target size={18} /><b>No {flowScope} nodes yet</b><span>Add a node to build this structure layer.</span></div>}</div></section><section className="flow-preview"><header><div><p>LIVE GRAPH</p><h3>{flowScope}</h3></div><span>{visibleSteps.length} node{visibleSteps.length === 1 ? '' : 's'}</span></header>{visibleSteps.length ? <PlaybookFlow steps={visibleSteps} /> : <div className="flow-filter-empty compact"><Target size={18} /><span>Nothing to display for this layer.</span></div>}</section></div>{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">{initialPlan ? 'Save strategy changes' : 'Save complete playbook'}</button></div></form></Modal>;
 }
 
-function AccountModal({ onClose, onSave }) {
+function AccountModal({ onClose, onSave, required = false }) {
   const [form, setForm] = useState({ name: '', broker: '', type: 'Personal', startingBalance: 10000 });
   const [error, setError] = useState('');
   const field = (key, value) => setForm(current => ({ ...current, [key]: value }));
@@ -580,7 +627,7 @@ function AccountModal({ onClose, onSave }) {
     if (!Number.isFinite(Number(form.startingBalance)) || Number(form.startingBalance) < 0) return setError('Enter a valid starting balance.');
     onSave({ ...form, startingBalance: Number(form.startingBalance) });
   };
-  return <Modal onClose={onClose} eyebrow="NEW TRADING ACCOUNT" title="Create an isolated workspace"><form onSubmit={submit}><div className="account-modal-intro"><WalletCards size={19} /><div><b>Independent performance memory</b><span>Trades, check-ins, playbooks, risk rules and analytics stay separated from every other account.</span></div></div><div className="modal-grid"><Field label="Account name"><input value={form.name} onChange={event => field('name', event.target.value)} placeholder="e.g. Personal live" autoFocus /></Field><Field label="Account type"><select value={form.type} onChange={event => field('type', event.target.value)}><option>Personal</option><option>Prop firm</option><option>Demo</option><option>Evaluation</option></select></Field><Field label="Broker / platform"><input value={form.broker} onChange={event => field('broker', event.target.value)} placeholder="e.g. Elefin" /></Field><Field label="Starting balance"><NumberField value={form.startingBalance} onChange={value => field('startingBalance', value)} prefix="$" /></Field></div>{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button"><Plus size={15} /> Create account</button></div></form></Modal>;
+  return <Modal onClose={onClose} dismissible={!required} eyebrow={required ? 'FIRST ACCOUNT SETUP' : 'NEW TRADING ACCOUNT'} title={required ? 'Build your first trading workspace' : 'Create an isolated workspace'}><form onSubmit={submit}><div className="account-modal-intro"><WalletCards size={19} /><div><b>{required ? 'Your private workspace needs an account' : 'Independent performance memory'}</b><span>Trades, check-ins, playbooks, risk rules and analytics stay separated from every other account.</span></div></div><div className="modal-grid"><Field label="Account name"><input value={form.name} onChange={event => field('name', event.target.value)} placeholder="e.g. Personal live" autoFocus /></Field><Field label="Account type"><select value={form.type} onChange={event => field('type', event.target.value)}><option>Personal</option><option>Prop firm</option><option>Demo</option><option>Evaluation</option></select></Field><Field label="Broker / platform"><input value={form.broker} onChange={event => field('broker', event.target.value)} placeholder="e.g. Elefin" /></Field><Field label="Starting balance"><NumberField value={form.startingBalance} onChange={value => field('startingBalance', value)} prefix="$" /></Field></div>{error && <div className="form-error">{error}</div>}<div className="modal-footer">{!required && <button type="button" className="secondary-button" onClick={onClose}>Cancel</button>}<button className="primary-button"><Plus size={15} /> {required ? 'Create first account' : 'Create account'}</button></div></form></Modal>;
 }
 
 function ReviewModal({ trade, onClose, onSave }) {
@@ -710,7 +757,7 @@ function ImageUploader({ images = [], onChange, title, help }) {
   return <section className="image-uploader"><header><div><small>VISUAL EVIDENCE</small><h3>{title}</h3><p>{help}</p></div><label className={busy || images.length >= MAX_IMAGES ? 'disabled' : ''}><Camera size={14} />{busy ? 'Processing…' : 'Add screenshots'}<input type="file" accept="image/*" multiple onChange={addImages} disabled={busy || images.length >= MAX_IMAGES} /></label></header>{images.length ? <div className="image-preview-grid">{images.map((image, index) => <figure key={image.id || index}><img src={image.url} alt={`${title} ${index + 1}`} /><figcaption><span>{image.name || `Screenshot ${index + 1}`}</span><button type="button" onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove ${image.name || `screenshot ${index + 1}`}`}><X size={12} /></button></figcaption></figure>)}</div> : <div className="image-drop-empty"><Camera size={18} /><span>No screenshots yet · JPG, PNG or WebP</span></div>}{error && <div className="form-error">{error}</div>}<footer>{images.length}/{MAX_IMAGES} images · compressed before D1 sync</footer></section>;
 }
 
-function Modal({ children, onClose, eyebrow, title }) { return <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="modal-panel" role="dialog" aria-modal="true"><div className="modal-heading"><div><p>{eyebrow}</p><h2>{title}</h2></div><button onClick={onClose}><X size={18} /></button></div>{children}</section></div>; }
+function Modal({ children, onClose, eyebrow, title, dismissible = true }) { return <div className="modal-backdrop" onMouseDown={e => dismissible && e.target === e.currentTarget && onClose()}><section className="modal-panel" role="dialog" aria-modal="true"><div className="modal-heading"><div><p>{eyebrow}</p><h2>{title}</h2></div>{dismissible && <button onClick={onClose}><X size={18} /></button>}</div>{children}</section></div>; }
 function Field({ label, children }) { return <label className="field-label"><span>{label}</span>{children}</label>; }
 function NumberField({ value, onChange, suffix, prefix }) { return <div className="number-field">{prefix && <span>{prefix}</span>}<input type="number" step="any" value={value} onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))} />{suffix && <small>{suffix}</small>}</div>; }
 function Instrument({ symbol }) { const item = INSTRUMENTS[symbol] || { label: symbol, accent: 'violet' }; return <span className="instrument"><InstrumentMark symbol={symbol} size={26} /><b>{item.label}</b></span>; }
