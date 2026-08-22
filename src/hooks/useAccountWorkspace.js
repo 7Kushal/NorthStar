@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-const STORE_KEY = 'northstar-account-workspace-v1';
+const LEGACY_STORE_KEY = 'northstar-account-workspace-v1';
 const LEGACY_DATA_KEY = 'northstar-react-v1';
 const LEGACY_PENDING_KEY = 'northstar-pending-elefin-session';
+const LEGACY_CLAIM_KEY = 'edgetrader-d1-migration-owner';
+const CACHE_PREFIX = 'edgetrader-workspace-cache-v1:';
 
 const clone = value => typeof structuredClone === 'function'
   ? structuredClone(value)
@@ -37,7 +39,6 @@ function createInitialStore(initialData) {
   const legacyPending = readJson(LEGACY_PENDING_KEY, null);
   const data = normalizeData(legacyData, initialData);
   if (!data.pendingSession && legacyPending) data.pendingSession = legacyPending;
-
   const primary = {
     id: 'primary',
     name: 'Primary account',
@@ -46,33 +47,130 @@ function createInitialStore(initialData) {
     createdAt: new Date().toISOString(),
     data,
   };
-
   return { version: 1, activeAccountId: primary.id, accounts: [primary] };
 }
 
-export function useAccountWorkspace(initialData) {
-  const [storageError, setStorageError] = useState('');
-  const [store, setStore] = useState(() => {
-    const saved = readJson(STORE_KEY, null);
-    if (!saved?.accounts?.length) return createInitialStore(initialData);
-    const accounts = saved.accounts.map(account => ({
-      ...account,
-      data: normalizeData(account.data, initialData),
-    }));
-    const activeAccountId = accounts.some(account => account.id === saved.activeAccountId)
-      ? saved.activeAccountId
-      : accounts[0].id;
-    return { version: 1, activeAccountId, accounts };
+function normalizeStore(value, initialData) {
+  if (!value?.accounts?.length) return createInitialStore(initialData);
+  const accounts = value.accounts.slice(0, 50).map(account => ({
+    ...account,
+    data: normalizeData(account.data, initialData),
+  }));
+  const activeAccountId = accounts.some(account => account.id === value.activeAccountId)
+    ? value.activeAccountId
+    : accounts[0].id;
+  return { version: 1, activeAccountId, accounts };
+}
+
+async function apiJson(path, options) {
+  const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...options });
+  let body = {};
+  try { body = await response.json(); } catch { /* A non-JSON proxy response is handled below. */ }
+  if (!response.ok) {
+    const error = new Error(body.error || `Cloud sync returned ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+  return body;
+}
+
+async function saveWorkspace(workspace) {
+  return apiJson('/api/workspace', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ workspace }),
   });
+}
+
+export function useAccountWorkspace(initialData) {
+  const legacyStore = useMemo(() => normalizeStore(readJson(LEGACY_STORE_KEY, null), initialData), [initialData]);
+  const [store, setStore] = useState(legacyStore);
+  const [identity, setIdentity] = useState(null);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('loading');
+  const [syncError, setSyncError] = useState('');
+  const [storageError, setStorageError] = useState('');
+  const identityRef = useRef(null);
+  const lastSavedRef = useRef('');
+  const saveQueueRef = useRef(Promise.resolve());
+  const storeRef = useRef(store);
+
+  useEffect(() => { storeRef.current = store; }, [store]);
 
   useEffect(() => {
+    let mounted = true;
+    const hydrate = async () => {
+      setSyncStatus('loading');
+      setSyncError('');
+      try {
+        const result = await apiJson('/api/workspace');
+        if (!mounted) return;
+        const user = result.user;
+        const userCacheKey = `${CACHE_PREFIX}${user.id}`;
+        const cachedForUser = readJson(userCacheKey, null);
+        let nextStore;
+
+        if (result.workspace) {
+          nextStore = normalizeStore(result.workspace, initialData);
+        } else if (cachedForUser) {
+          nextStore = normalizeStore(cachedForUser, initialData);
+          await saveWorkspace(nextStore);
+        } else {
+          const claimedBy = localStorage.getItem(LEGACY_CLAIM_KEY);
+          nextStore = !claimedBy || claimedBy === user.id
+            ? legacyStore
+            : normalizeStore(null, initialData);
+          await saveWorkspace(nextStore);
+          localStorage.setItem(LEGACY_CLAIM_KEY, user.id);
+        }
+
+        if (!mounted) return;
+        const serialized = JSON.stringify(nextStore);
+        identityRef.current = user;
+        lastSavedRef.current = serialized;
+        setIdentity(user);
+        setStore(nextStore);
+        localStorage.setItem(userCacheKey, serialized);
+        setIsHydrated(true);
+        setSyncStatus('synced');
+      } catch (error) {
+        if (!mounted) return;
+        setSyncStatus(error.status === 401 ? 'unauthorized' : 'error');
+        setSyncError(error.message || 'Could not connect to the cloud workspace.');
+      }
+    };
+    hydrate();
+    return () => { mounted = false; };
+  }, [initialData, legacyStore]);
+
+  useEffect(() => {
+    if (!isHydrated || !identityRef.current) return;
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(store));
+      localStorage.setItem(`${CACHE_PREFIX}${identityRef.current.id}`, JSON.stringify(store));
       setStorageError('');
     } catch {
-      setStorageError('Remove a few screenshots or old records, then save again. Your latest change is still open but may not survive a reload.');
+      setStorageError('The browser cache is full. EdgeTrader will still attempt to save this change to D1.');
     }
-  }, [store]);
+
+    const serialized = JSON.stringify(store);
+    if (serialized === lastSavedRef.current) return;
+    setSyncStatus('saving');
+    const timer = window.setTimeout(() => {
+      const snapshot = store;
+      saveQueueRef.current = saveQueueRef.current.then(async () => {
+        await saveWorkspace(snapshot);
+        lastSavedRef.current = serialized;
+        if (JSON.stringify(storeRef.current) === serialized) {
+          setSyncStatus('synced');
+          setSyncError('');
+        }
+      }).catch(error => {
+        setSyncStatus(error.status === 401 ? 'unauthorized' : 'error');
+        setSyncError(error.message || 'This change is cached locally but has not reached D1 yet.');
+      });
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [isHydrated, store]);
 
   const activeAccount = useMemo(
     () => store.accounts.find(account => account.id === store.activeAccountId) || store.accounts[0],
@@ -83,8 +181,7 @@ export function useAccountWorkspace(initialData) {
     ...current,
     accounts: current.accounts.map(account => {
       if (account.id !== current.activeAccountId) return account;
-      const currentData = account.data;
-      const nextData = typeof updater === 'function' ? updater(currentData) : updater;
+      const nextData = typeof updater === 'function' ? updater(account.data) : updater;
       return { ...account, data: nextData };
     }),
   }));
@@ -105,11 +202,7 @@ export function useAccountWorkspace(initialData) {
       createdAt: new Date().toISOString(),
       data,
     };
-    setStore(current => ({
-      ...current,
-      activeAccountId: id,
-      accounts: [...current.accounts, account],
-    }));
+    setStore(current => ({ ...current, activeAccountId: id, accounts: [...current.accounts, account] }));
     return id;
   };
 
@@ -137,6 +230,10 @@ export function useAccountWorkspace(initialData) {
     createAccount,
     updateAccount,
     deleteAccount,
+    identity,
+    isHydrated,
+    syncStatus,
+    syncError,
     storageError,
   };
 }

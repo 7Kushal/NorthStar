@@ -6,10 +6,13 @@ EdgeTrader is a React trading journal and execution-review workspace with live B
 
 ```bash
 npm install
+npm run db:migrate:local
 npm run start
 ```
 
-The local app runs at `http://127.0.0.1:4173`.
+The local app runs at `http://127.0.0.1:4173`. Wrangler simulates a Cloudflare
+Access identity (`local@edgetrader.dev`) and persists the local D1 database
+between restarts.
 
 ## Production build
 
@@ -28,19 +31,28 @@ Connect this repository to Cloudflare Workers Builds and configure:
 - Root directory: `/`
 
 `wrangler.jsonc` uploads `dist/` as static assets, enables SPA routing, and runs
-`worker/index.js` for `/api/*`. The Worker provides the production
-`/api/forex-factory` endpoint used by the economic calendar.
+`worker/index.js` for `/api/*`. The Worker provides the economic calendar and
+authenticated workspace APIs.
 
-## Public access
+## Production D1
 
-EdgeTrader does not require authentication. Anyone with the deployed URL can
-open the application. Each visitor receives a separate browser-local workspace;
-data is not shared between browsers or devices.
+The APAC `edgetrader-prod` database is provisioned and pinned by ID in
+`wrangler.jsonc`. Authorized maintainers can apply future migrations with:
+
+```bash
+npx wrangler login
+npm run db:migrate:remote
+```
+
+Do not create another production database. In the Cloudflare dashboard, protect
+the deployed Worker with Cloudflare Access and an allow policy for the people
+who may use EdgeTrader. The Worker rejects D1 workspace requests when Access is
+not enabled.
 
 ## Data persistence
 
-Each trading account has its own journal entries, check-ins, playbooks, risk
-settings and analytics state in browser `localStorage`. Existing NorthStar data
-is migrated automatically into a **Primary account**. Records persist on the
-same deployed origin and browser profile, but they are not synchronized across
-devices. Cloudflare D1 is still required for cloud synchronization.
+Each Cloudflare Access user has one private D1 workspace containing all of their
+trading accounts, journal entries, check-ins, playbooks, risk settings, and
+analytics inputs. Existing browser-local NorthStar data is claimed once by the
+first authenticated identity and uploaded automatically. A user-scoped browser
+cache remains for recovery, but D1 is the cloud source of truth across devices.

@@ -6,16 +6,22 @@
   "scripts": {
     "start": "vite --host 127.0.0.1 --port 4173",
     "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 4173"
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "db:migrate:local": "wrangler d1 migrations apply edgetrader-prod --local",
+    "db:migrate:remote": "wrangler d1 migrations apply edgetrader-prod --remote",
+    "db:create": "wrangler d1 create edgetrader-prod"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
     "echarts": "^6.0.0",
     "echarts-for-react": "latest",
     "lucide-react": "latest",
-    "vite": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "vite": "latest"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.53.1",
+    "wrangler": "^4.125.0"
+  }
 }

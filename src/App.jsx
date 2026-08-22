@@ -6,7 +6,7 @@ import {
   LineChart, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, Target, Trash2,
   TrendingUp, WalletCards, X, ZoomIn, Moon, Sun, ExternalLink, RefreshCw, Clock3,
   Newspaper, Radio, ZoomOut, RotateCcw, ChevronLeft, ChevronRight, Camera,
-  Maximize2, Pencil
+  Maximize2, Pencil, Cloud, CloudOff, LoaderCircle, Database,
 } from 'lucide-react';
 import { useLocalState } from './hooks/useLocalState';
 import { useAccountWorkspace } from './hooks/useAccountWorkspace';
@@ -97,15 +97,20 @@ function InstrumentMark({ symbol, size = 28 }) {
   return <span className="market-mark fallback-mark" style={{ width: size, height: size }} aria-hidden="true">{symbol?.slice(0, 1)}</span>;
 }
 
-function WelcomeScreen({ account, accountCount, onEnter }) {
+function WorkspaceBootState({ status, error }) {
+  const failed = status === 'error' || status === 'unauthorized';
+  return <main className="welcome-screen"><div className="welcome-aurora" aria-hidden="true" /><section className="welcome-card workspace-boot"><div className="welcome-top"><div className="welcome-brand">{failed ? <CloudOff size={20} /> : <Cloud size={20} />}</div><span className="welcome-wordmark">EDGETRADER <i>CLOUD</i></span></div><div className={`welcome-status ${failed ? 'failed' : ''}`}><span /> {failed ? 'Connection required' : 'Securing workspace'}</div><p>CLOUDFLARE D1</p><h1>{failed ? 'Workspace unavailable.' : 'Loading your workspace.'}</h1><span>{failed ? error : 'Identifying your Cloudflare Access account and loading its private journal.'}</span>{failed ? <button className="primary-button welcome-enter" onClick={() => window.location.reload()}><RefreshCw size={16} /> Try again</button> : <LoaderCircle className="workspace-loader" size={25} />}</section></main>;
+}
+
+function WelcomeScreen({ account, accountCount, identity, onEnter }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  return <main className="welcome-screen"><div className="welcome-aurora" aria-hidden="true" /><section className="welcome-card"><div className="welcome-top"><div className="welcome-brand"><Sparkles size={20} /></div><span className="welcome-wordmark">EDGETRADER <i>OS</i></span></div><div className="welcome-status"><span /> Workspace ready</div><p>WELCOME TO EDGETRADER</p><h1>{greeting}, Trader.</h1><span>Your trading workspace is ready. Continue with <b>{account.name}</b>, or switch accounts from the navigation after entering.</span><div className="welcome-summary"><article><small>ACTIVE ACCOUNT</small><b>{account.name}</b><span>{account.broker} · {account.type}</span></article><article><small>WORKSPACES</small><b>{accountCount}</b><span>Independent trading account{accountCount === 1 ? '' : 's'}</span></article></div><button className="primary-button welcome-enter" onClick={onEnter}>Enter EdgeTrader <ArrowUpRight size={17} /></button><small className="welcome-security"><ShieldCheck size={13} /> Public access · Your workspace data stays in this browser</small></section></main>;
+  return <main className="welcome-screen"><div className="welcome-aurora" aria-hidden="true" /><section className="welcome-card"><div className="welcome-top"><div className="welcome-brand"><Sparkles size={20} /></div><span className="welcome-wordmark">EDGETRADER <i>OS</i></span></div><div className="welcome-status"><span /> D1 workspace synced</div><p>WELCOME TO EDGETRADER</p><h1>{greeting}, Trader.</h1><span>Your private trading workspace is ready. Continue with <b>{account.name}</b>, or switch accounts after entering.</span><div className="welcome-summary"><article><small>ACTIVE ACCOUNT</small><b>{account.name}</b><span>{account.broker} · {account.type}</span></article><article><small>WORKSPACES</small><b>{accountCount}</b><span>Independent trading account{accountCount === 1 ? '' : 's'}</span></article></div><button className="primary-button welcome-enter" onClick={onEnter}>Enter EdgeTrader <ArrowUpRight size={17} /></button><small className="welcome-security"><ShieldCheck size={13} /> Signed in as {identity?.email || 'Cloudflare Access user'} · Encrypted in transit</small></section></main>;
 }
 
 export default function App() {
   const workspace = useAccountWorkspace(INITIAL);
-  const { accounts, activeAccount, data, setData, switchAccount, createAccount, deleteAccount, storageError } = workspace;
+  const { accounts, activeAccount, data, setData, switchAccount, createAccount, deleteAccount, identity, isHydrated, syncStatus, syncError, storageError } = workspace;
   const [page, setPage] = useState('dashboard');
   const [mobileNav, setMobileNav] = useState(false);
   const [navCollapsed, setNavCollapsed] = useLocalState('northstar-nav-collapsed', false);
@@ -162,10 +167,11 @@ export default function App() {
     document.documentElement.style.colorScheme = theme;
   }, [theme]);
 
-  if (!workspaceEntered) return <WelcomeScreen account={activeAccount} accountCount={accounts.length} onEnter={() => { sessionStorage.setItem('northstar-workspace-entered', 'true'); setWorkspaceEntered(true); }} />;
+  if (!isHydrated) return <WorkspaceBootState status={syncStatus} error={syncError} />;
+  if (!workspaceEntered) return <WelcomeScreen account={activeAccount} accountCount={accounts.length} identity={identity} onEnter={() => { sessionStorage.setItem('northstar-workspace-entered', 'true'); setWorkspaceEntered(true); }} />;
 
   return <div className={`app-shell theme-${theme} ${navCollapsed ? 'nav-collapsed' : ''}`}>
-    <Sidebar page={page} go={go} open={mobileNav} accounts={accounts} activeAccount={activeAccount} onSwitchAccount={selectAccount} onAddAccount={() => setAccountModal(true)} onDeleteAccount={deleteAccount} />
+    <Sidebar page={page} go={go} open={mobileNav} accounts={accounts} activeAccount={activeAccount} identity={identity} syncStatus={syncStatus} onSwitchAccount={selectAccount} onAddAccount={() => setAccountModal(true)} onDeleteAccount={deleteAccount} />
     <main className="main-shell">
       <Topbar page={page} onMenu={toggleNavigation} onNewTrade={() => openTrade()} theme={theme} onTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} navCollapsed={navCollapsed} data={data} totalPnl={totalPnl} activeAccount={activeAccount} />
       <div className="account-workspace" key={activeAccount.id}>
@@ -175,7 +181,7 @@ export default function App() {
         {page === 'calendar' && <EconomicCalendar />}
         {page === 'premarket' && <Premarket routine={data.routine} activePlan={activePlan} patch={patch} go={go} />}
         {page === 'plans' && <Plans plans={data.plans} patch={patch} onAdd={() => setPlanModal('new')} onEdit={setPlanModal} />}
-        {page === 'settings' && <RiskSettings settings={data.settings} patch={patch} account={activeAccount} />}
+        {page === 'settings' && <RiskSettings settings={data.settings} patch={patch} account={activeAccount} identity={identity} syncStatus={syncStatus} />}
       </div>
     </main>
     {mobileNav && <button className="nav-scrim" onClick={() => setMobileNav(false)} aria-label="Close navigation" />}
@@ -191,10 +197,11 @@ export default function App() {
     {elefinModal && <ElefinCheckIn accountId={activeAccount.id} onClose={() => setElefinModal(false)} onStart={stageSession} />}
     {pendingSession && <SessionStatusModal session={pendingSession} onAcknowledge={acknowledgeSession} onCancel={cancelSession} />}
     {storageError && <div className="storage-alert" role="alert"><ShieldCheck size={15} /><div><b>Browser storage is full</b><span>{storageError}</span></div></div>}
+    {syncError && <div className="storage-alert cloud-sync-alert" role="alert"><CloudOff size={15} /><div><b>D1 sync paused</b><span>{syncError}</span></div></div>}
   </div>;
 }
 
-function Sidebar({ page, go, open, accounts, activeAccount, onSwitchAccount, onAddAccount, onDeleteAccount }) {
+function Sidebar({ page, go, open, accounts, activeAccount, identity, syncStatus, onSwitchAccount, onAddAccount, onDeleteAccount }) {
   const [accountMenu, setAccountMenu] = useState(false);
   const accountMenuRef = useRef(null);
   useEffect(() => {
@@ -214,7 +221,7 @@ function Sidebar({ page, go, open, accounts, activeAccount, onSwitchAccount, onA
     <div className="nav-label">Workspace</div>
     <nav>{NAV.map(([id, Icon, label]) => <button key={id} className={page === id ? 'active' : ''} onClick={() => go(id)} title={label} aria-label={label}><Icon size={18} /><span>{label}</span>{page === id && <i />}</button>)}</nav>
     <div className="sidebar-spacer" />
-    <div className="system-chip"><i /> All systems operational</div>
+    <div className={`system-chip sync-${syncStatus}`}><i /> {syncStatus === 'saving' ? 'Saving to D1…' : syncStatus === 'synced' ? 'D1 cloud synced' : 'Cloud sync paused'}</div>
     <div className="account-switcher" ref={accountMenuRef}>
       <button className="account-switcher-trigger" onClick={() => setAccountMenu(current => !current)} aria-expanded={accountMenu}>
         <span><WalletCards size={17} /></span><div><b>{activeAccount.name}</b><small>{activeAccount.broker} · {activeAccount.type}</small></div><ChevronDown size={15} />
@@ -223,7 +230,7 @@ function Sidebar({ page, go, open, accounts, activeAccount, onSwitchAccount, onA
         <header><span>TRADING ACCOUNTS</span><b>{accounts.length}</b></header>
         <div>{accounts.map(account => <div className={`account-option ${account.id === activeAccount.id ? 'active' : ''}`} key={account.id}>
           <button onClick={() => { onSwitchAccount(account.id); setAccountMenu(false); }}><i>{account.id === activeAccount.id ? <Check size={12} /> : <WalletCards size={12} />}</i><span><b>{account.name}</b><small>{account.broker} · {plainMoney(Number(account.data.settings.startingBalance || 0))}</small></span></button>
-          {accounts.length > 1 && <button className="account-delete" onClick={() => { if (window.confirm(`Delete ${account.name} and all locally stored data for it?`)) onDeleteAccount(account.id); }} aria-label={`Delete ${account.name}`}><Trash2 size={13} /></button>}
+          {accounts.length > 1 && <button className="account-delete" onClick={() => { if (window.confirm(`Delete ${account.name} and all saved data for it?`)) onDeleteAccount(account.id); }} aria-label={`Delete ${account.name}`}><Trash2 size={13} /></button>}
         </div>)}</div>
         <button className="account-add" onClick={() => { setAccountMenu(false); onAddAccount(); }}><Plus size={14} /> Create trading account</button>
         <button className="cloudflare-logout" type="button" onClick={async () => {
@@ -241,7 +248,7 @@ function Sidebar({ page, go, open, accounts, activeAccount, onSwitchAccount, onA
         }}>End Cloudflare session <ShieldCheck size={13} /></button>
       </div>}
     </div>
-    <div className="user-card"><span>ET</span><div><b>EdgeTrader</b><small>Browser-local workspace</small></div></div>
+    <div className="user-card"><span>{identity?.email?.slice(0, 2).toUpperCase() || 'ET'}</span><div><b>{identity?.name || 'EdgeTrader'}</b><small title={identity?.email}>{identity?.email || 'Cloudflare Access'}</small></div></div>
   </aside>;
 }
 
@@ -534,9 +541,9 @@ function PlaybookFlow({ steps, compact = false }) {
   return <div className={`playbook-flow ${compact ? 'compact' : ''}`}>{steps.map((step, index) => <React.Fragment key={step.id || `${step.type}-${index}`}><div className={`flow-node type-${String(step.type || 'step').toLowerCase()}`}><span>{String(index + 1).padStart(2, '0')}</span><div><small>{step.type || 'Step'}</small><b>{step.text?.trim() || 'Define this step'}</b></div></div>{index < steps.length - 1 && <div className="flow-connector"><i /><ChevronDown size={13} /></div>}</React.Fragment>)}</div>;
 }
 
-function RiskSettings({ settings, patch, account }) {
+function RiskSettings({ settings, patch, account, identity, syncStatus }) {
   const [form, setForm] = useState(settings), save = e => { e.preventDefault(); patch(next => next.settings = { ...form }); };
-  return <div className="settings-layout"><section className="surface settings-copy"><div className="settings-icon"><ShieldCheck size={22} /></div><p>RISK GOVERNANCE · {account.name}</p><h2>Rules that protect you before the click.</h2><span>These controls apply only to {account.name}. Switching accounts loads that account's own limits, journal and analytics.</span><div className="settings-note"><Sparkles size={16} /><div><b>Discipline by design</b><small>Guardrails are most useful when decided before the session.</small></div></div></section><form className="surface settings-form" onSubmit={save}><SectionTitle eyebrow="ACCOUNT LIMITS" title={`${account.name} controls`} /><div className="settings-grid"><Field label="Starting account balance"><NumberField value={form.startingBalance} onChange={value => setForm({ ...form, startingBalance: value })} prefix="$" /></Field><Field label="Maximum daily loss"><NumberField value={form.maxDailyLoss} onChange={value => setForm({ ...form, maxDailyLoss: value })} prefix="$" /></Field><Field label="Maximum trades per day"><NumberField value={form.maxTrades} onChange={value => setForm({ ...form, maxTrades: value })} /></Field><Field label="Default risk per trade"><NumberField value={form.riskPerTrade} onChange={value => setForm({ ...form, riskPerTrade: value })} prefix="$" /></Field></div><button className="primary-button save-settings">Save controls</button></form><section className="surface access-settings"><div><span><ShieldCheck size={17} /></span><div><p>DATA STORAGE</p><h3>Browser-local workspace</h3><small>Authentication is disabled. Journal and account data remain in this browser's local storage.</small></div></div></section></div>;
+  return <div className="settings-layout"><section className="surface settings-copy"><div className="settings-icon"><ShieldCheck size={22} /></div><p>RISK GOVERNANCE · {account.name}</p><h2>Rules that protect you before the click.</h2><span>These controls apply only to {account.name}. Switching accounts loads that account's own limits, journal and analytics.</span><div className="settings-note"><Sparkles size={16} /><div><b>Discipline by design</b><small>Guardrails are most useful when decided before the session.</small></div></div></section><form className="surface settings-form" onSubmit={save}><SectionTitle eyebrow="ACCOUNT LIMITS" title={`${account.name} controls`} /><div className="settings-grid"><Field label="Starting account balance"><NumberField value={form.startingBalance} onChange={value => setForm({ ...form, startingBalance: value })} prefix="$" /></Field><Field label="Maximum daily loss"><NumberField value={form.maxDailyLoss} onChange={value => setForm({ ...form, maxDailyLoss: value })} prefix="$" /></Field><Field label="Maximum trades per day"><NumberField value={form.maxTrades} onChange={value => setForm({ ...form, maxTrades: value })} /></Field><Field label="Default risk per trade"><NumberField value={form.riskPerTrade} onChange={value => setForm({ ...form, riskPerTrade: value })} prefix="$" /></Field></div><button className="primary-button save-settings">Save controls</button></form><section className="surface access-settings"><div><span><Database size={17} /></span><div><p>CLOUDFLARE D1</p><h3>{syncStatus === 'saving' ? 'Saving cloud workspace…' : 'Cloud workspace connected'}</h3><small>{identity?.email || 'Cloudflare Access user'} · Every account, journal entry, plan and session is isolated to this identity.</small></div></div></section></div>;
 }
 
 function TradeModal({ plans, initialDate, onClose, onSave }) {
@@ -700,7 +707,7 @@ function ImageUploader({ images = [], onChange, title, help }) {
       setBusy(false);
     }
   };
-  return <section className="image-uploader"><header><div><small>VISUAL EVIDENCE</small><h3>{title}</h3><p>{help}</p></div><label className={busy || images.length >= MAX_IMAGES ? 'disabled' : ''}><Camera size={14} />{busy ? 'Processing…' : 'Add screenshots'}<input type="file" accept="image/*" multiple onChange={addImages} disabled={busy || images.length >= MAX_IMAGES} /></label></header>{images.length ? <div className="image-preview-grid">{images.map((image, index) => <figure key={image.id || index}><img src={image.url} alt={`${title} ${index + 1}`} /><figcaption><span>{image.name || `Screenshot ${index + 1}`}</span><button type="button" onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove ${image.name || `screenshot ${index + 1}`}`}><X size={12} /></button></figcaption></figure>)}</div> : <div className="image-drop-empty"><Camera size={18} /><span>No screenshots yet · JPG, PNG or WebP</span></div>}{error && <div className="form-error">{error}</div>}<footer>{images.length}/{MAX_IMAGES} images · compressed for browser-local storage</footer></section>;
+  return <section className="image-uploader"><header><div><small>VISUAL EVIDENCE</small><h3>{title}</h3><p>{help}</p></div><label className={busy || images.length >= MAX_IMAGES ? 'disabled' : ''}><Camera size={14} />{busy ? 'Processing…' : 'Add screenshots'}<input type="file" accept="image/*" multiple onChange={addImages} disabled={busy || images.length >= MAX_IMAGES} /></label></header>{images.length ? <div className="image-preview-grid">{images.map((image, index) => <figure key={image.id || index}><img src={image.url} alt={`${title} ${index + 1}`} /><figcaption><span>{image.name || `Screenshot ${index + 1}`}</span><button type="button" onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove ${image.name || `screenshot ${index + 1}`}`}><X size={12} /></button></figcaption></figure>)}</div> : <div className="image-drop-empty"><Camera size={18} /><span>No screenshots yet · JPG, PNG or WebP</span></div>}{error && <div className="form-error">{error}</div>}<footer>{images.length}/{MAX_IMAGES} images · compressed before D1 sync</footer></section>;
 }
 
 function Modal({ children, onClose, eyebrow, title }) { return <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="modal-panel" role="dialog" aria-modal="true"><div className="modal-heading"><div><p>{eyebrow}</p><h2>{title}</h2></div><button onClick={onClose}><X size={18} /></button></div>{children}</section></div>; }
