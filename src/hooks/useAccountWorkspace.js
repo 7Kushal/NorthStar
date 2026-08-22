@@ -51,6 +51,7 @@ function createInitialStore(initialData) {
 }
 
 export function useAccountWorkspace(initialData) {
+  const [storageError, setStorageError] = useState('');
   const [store, setStore] = useState(() => {
     const saved = readJson(STORE_KEY, null);
     if (!saved?.accounts?.length) return createInitialStore(initialData);
@@ -65,7 +66,12 @@ export function useAccountWorkspace(initialData) {
   });
 
   useEffect(() => {
-    localStorage.setItem(STORE_KEY, JSON.stringify(store));
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(store));
+      setStorageError('');
+    } catch {
+      setStorageError('Remove a few screenshots or old records, then save again. Your latest change is still open but may not survive a reload.');
+    }
   }, [store]);
 
   const activeAccount = useMemo(
@@ -131,5 +137,6 @@ export function useAccountWorkspace(initialData) {
     createAccount,
     updateAccount,
     deleteAccount,
+    storageError,
   };
 }
