@@ -71,7 +71,7 @@ function AccessLoading() {
 }
 
 function AccessRequired() {
-  return <main className="access-screen"><div className="access-card"><div className="access-brand"><ShieldCheck size={20} /></div><p>PRIVATE ACCESS</p><h1>Sign in to NorthStar</h1><span>This workspace accepts only the Gmail address allowed by your Cloudflare Access policy. Public sign-up is disabled.</span><button className="primary-button" onClick={() => window.location.reload()}>Continue with Google <ArrowUpRight size={16} /></button><small>If this screen remains after refresh, enable Access on the Worker and allow your exact Gmail address.</small></div></main>;
+  return <main className="access-screen"><div className="access-card"><div className="access-brand"><ShieldCheck size={20} /></div><p>PRIVATE ACCESS</p><h1>Sign in to NorthStar</h1><span>This workspace accepts only members of your Cloudflare account. Public application sign-up and third-party login methods are disabled.</span><button className="primary-button" onClick={() => window.location.reload()}>Continue with Cloudflare <ArrowUpRight size={16} /></button><small>If this screen remains after refresh, enable Access on the Worker and restrict the Cloudflare identity provider to account members.</small></div></main>;
 }
 
 export default function App() {
