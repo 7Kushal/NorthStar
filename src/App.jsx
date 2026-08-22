@@ -6,7 +6,7 @@ import {
   LineChart, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, Target, Trash2,
   TrendingUp, WalletCards, X, ZoomIn, Moon, Sun, ExternalLink, RefreshCw, Clock3,
   Newspaper, Radio, ZoomOut, RotateCcw, ChevronLeft, ChevronRight, Camera,
-  Maximize2
+  Maximize2, Pencil
 } from 'lucide-react';
 import { useLocalState } from './hooks/useLocalState';
 import { useAccountWorkspace } from './hooks/useAccountWorkspace';
@@ -19,8 +19,8 @@ const INITIAL = {
   pendingSession: null,
 };
 const INSTRUMENTS = {
-  BTCUSD: { label: 'BTC / USD', name: 'Bitcoin / US Dollar', icon: '₿', accent: 'orange' },
-  XAUUSD: { label: 'XAU / USD', name: 'Gold Spot / US Dollar', icon: '◆', accent: 'gold' },
+  BTCUSD: { label: 'BTC / USD', name: 'Bitcoin / US Dollar', accent: 'orange' },
+  XAUUSD: { label: 'XAU / USD', name: 'Gold Spot / US Dollar', accent: 'gold' },
 };
 const NAV = [
   ['dashboard', LayoutDashboard, 'Overview'], ['journal', BookOpen, 'Journal'],
@@ -51,6 +51,32 @@ const money = (value, sign = true) => `${sign && value > 0 ? '+' : ''}${value < 
 const plainMoney = value => Number.isFinite(value) ? `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
 const formatQuote = value => Number.isFinite(value) ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
 const uid = () => crypto.randomUUID();
+const listFromText = value => value.split('\n').map(item => item.trim()).filter(Boolean);
+const MAX_IMAGES = 8;
+const MAX_IMAGE_STORE_SIZE = 1200000;
+const compressUpload = file => new Promise((resolve, reject) => {
+  if (!file.type.startsWith('image/')) return reject(new Error(`${file.name} is not an image.`));
+  if (file.size > 12000000) return reject(new Error(`${file.name} is larger than 12 MB.`));
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+  reader.onload = () => {
+    const image = new Image();
+    image.onerror = () => reject(new Error(`Could not process ${file.name}.`));
+    image.onload = () => {
+      const scale = Math.min(1, 1100 / image.width, 760 / image.height);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      const context = canvas.getContext('2d');
+      context.fillStyle = '#080a0e';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      resolve({ id: uid(), name: file.name, url: canvas.toDataURL('image/jpeg', .68) });
+    };
+    image.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+});
 const toLocalDateTimeValue = (value = new Date()) => {
   const date = new Date(value);
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -65,6 +91,12 @@ const updateStoredCheckinStatus = (id, status, accountId) => {
   }
 };
 
+function InstrumentMark({ symbol, size = 28 }) {
+  if (symbol === 'BTCUSD') return <span className="market-mark bitcoin-mark" style={{ width: size, height: size }} aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" /><text x="16" y="21.1" textAnchor="middle">₿</text><path d="M10 8.2 22 23.8M10 23.8 22 8.2" /></svg></span>;
+  if (symbol === 'XAUUSD') return <span className="market-mark gold-mark" style={{ width: size, height: size }} aria-hidden="true"><svg viewBox="0 0 32 32"><path className="gold-back" d="M16 3.6 28.4 16 16 28.4 3.6 16Z" /><path className="gold-top" d="M16 3.6 16 16 3.6 16Z" /><path className="gold-side" d="M28.4 16 16 28.4 16 16Z" /><path className="gold-glint" d="m16 8.2 7.8 7.8-2.1 2.1-5.7-5.7-5.7 5.7L8.2 16Z" /></svg></span>;
+  return <span className="market-mark fallback-mark" style={{ width: size, height: size }} aria-hidden="true">{symbol?.slice(0, 1)}</span>;
+}
+
 function WelcomeScreen({ account, accountCount, onEnter }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -73,13 +105,13 @@ function WelcomeScreen({ account, accountCount, onEnter }) {
 
 export default function App() {
   const workspace = useAccountWorkspace(INITIAL);
-  const { accounts, activeAccount, data, setData, switchAccount, createAccount, deleteAccount } = workspace;
+  const { accounts, activeAccount, data, setData, switchAccount, createAccount, deleteAccount, storageError } = workspace;
   const [page, setPage] = useState('dashboard');
   const [mobileNav, setMobileNav] = useState(false);
   const [navCollapsed, setNavCollapsed] = useLocalState('northstar-nav-collapsed', false);
   const [tradeModal, setTradeModal] = useState(false);
   const [tradeDate, setTradeDate] = useState(null);
-  const [planModal, setPlanModal] = useState(false);
+  const [planModal, setPlanModal] = useState(null);
   const [accountModal, setAccountModal] = useState(false);
   const [reviewTrade, setReviewTrade] = useState(null);
   const [elefinModal, setElefinModal] = useState(false);
@@ -113,7 +145,7 @@ export default function App() {
   };
   const selectAccount = id => {
     switchAccount(id);
-    setTradeModal(false); setPlanModal(false); setReviewTrade(null); setElefinModal(false);
+    setTradeModal(false); setPlanModal(null); setReviewTrade(null); setElefinModal(false);
   };
   const toggleNavigation = () => {
     if (window.matchMedia('(max-width: 820px)').matches) {
@@ -142,22 +174,23 @@ export default function App() {
         {page === 'analytics' && <Analytics trades={data.trades} sessions={sessions} theme={theme} />}
         {page === 'calendar' && <EconomicCalendar />}
         {page === 'premarket' && <Premarket routine={data.routine} activePlan={activePlan} patch={patch} go={go} />}
-        {page === 'plans' && <Plans plans={data.plans} patch={patch} onAdd={() => setPlanModal(true)} />}
+        {page === 'plans' && <Plans plans={data.plans} patch={patch} onAdd={() => setPlanModal('new')} onEdit={setPlanModal} />}
         {page === 'settings' && <RiskSettings settings={data.settings} patch={patch} account={activeAccount} />}
       </div>
     </main>
     {mobileNav && <button className="nav-scrim" onClick={() => setMobileNav(false)} aria-label="Close navigation" />}
     {tradeModal && <TradeModal plans={data.plans} initialDate={tradeDate} onClose={() => { setTradeModal(false); setTradeDate(null); }} onSave={trade => { addTrade(trade); setTradeModal(false); setTradeDate(null); }} />}
-    {planModal && <PlanModal onClose={() => setPlanModal(false)} onSave={plan => { patch(next => { if (!next.plans.length) plan.active = true; next.plans.push(plan); }); setPlanModal(false); }} />}
+    {planModal && <PlanModal initialPlan={planModal === 'new' ? null : planModal} onClose={() => setPlanModal(null)} onSave={plan => { patch(next => { const index = next.plans.findIndex(item => item.id === plan.id); if (index >= 0) next.plans[index] = plan; else { if (!next.plans.length) plan.active = true; next.plans.push(plan); } }); setPlanModal(null); }} />}
     {accountModal && <AccountModal onClose={() => setAccountModal(false)} onSave={details => { createAccount(details); setAccountModal(false); }} />}
     {reviewTrade && <ReviewModal trade={reviewTrade} onClose={() => setReviewTrade(null)} onSave={updates => { patch(next => Object.assign(next.trades.find(t => t.id === reviewTrade.id), updates)); setReviewTrade(null); }} />}
     <button type="button" className="elefin-hanger" onClick={() => setElefinModal(true)} aria-haspopup="dialog" aria-expanded={elefinModal}>
-      <span className="elefin-hanger-icon"><Sparkles size={18} /></span>
+      <span className="elefin-hanger-icon"><img src="/elefin-icon.png" alt="" /></span>
       <span><small>{sessions.length ? `${sessions.length} CHECK-IN${sessions.length === 1 ? '' : 'S'} SAVED` : 'PRE-TRADE GATE'}</small><b>Lets Go To Elefin</b></span>
       <ExternalLink size={17} />
     </button>
     {elefinModal && <ElefinCheckIn accountId={activeAccount.id} onClose={() => setElefinModal(false)} onStart={stageSession} />}
     {pendingSession && <SessionStatusModal session={pendingSession} onAcknowledge={acknowledgeSession} onCancel={cancelSession} />}
+    {storageError && <div className="storage-alert" role="alert"><ShieldCheck size={15} /><div><b>Browser storage is full</b><span>{storageError}</span></div></div>}
   </div>;
 }
 
@@ -198,14 +231,14 @@ function Sidebar({ page, go, open, accounts, activeAccount, onSwitchAccount, onA
           sessionStorage.removeItem('northstar-workspace-entered');
           try {
             await Promise.race([
-              fetch('/cdn-cgi/access/logout', { credentials: 'include', cache: 'no-store' }),
+              fetch('/cdn-cgi/access/logout', { credentials: 'include', cache: 'no-store', redirect: 'manual' }),
               new Promise(resolve => window.setTimeout(resolve, 1400)),
             ]);
           } catch {
-            // Access may not be enabled on a public deployment; dashboard logout still runs.
+            // Public deployments may not have Cloudflare Access enabled.
           }
-          window.location.replace('https://dash.cloudflare.com/oauth2/logout');
-        }}>End Cloudflare session <ExternalLink size={13} /></button>
+          window.location.reload();
+        }}>End Cloudflare session <ShieldCheck size={13} /></button>
       </div>}
     </div>
     <div className="user-card"><span>ET</span><div><b>EdgeTrader</b><small>Browser-local workspace</small></div></div>
@@ -217,7 +250,7 @@ function Topbar({ page, onMenu, onNewTrade, theme, onTheme, navCollapsed, data, 
   const openPnl = 0;
   const balance = Number(data.settings.startingBalance || 0) + totalPnl;
   const equity = balance + openPnl;
-  return <header className="topbar"><button className="menu-button" onClick={onMenu} aria-label={navCollapsed ? 'Open navigation' : 'Toggle navigation'} title={navCollapsed ? 'Open navigation' : 'Toggle navigation'}><Menu size={20} /></button><div className="topbar-title"><p>{eyebrow}</p><h1>{title}</h1><span className="topbar-account"><WalletCards size={12} /> {activeAccount.name}</span></div><div className="account-strip" aria-label="Account status"><div><span>BALANCE</span><b>{plainMoney(balance)}</b></div><div><span>OPEN P&amp;L</span><b className="positive">{money(openPnl)}</b></div><div><span>EQUITY</span><b>{plainMoney(equity)}</b></div></div><div className="top-actions"><div className="today"><CalendarDays size={15} />{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div><button className="round-button theme-toggle" onClick={onTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>{theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}</button><button className="primary-button" onClick={onNewTrade}><Plus size={16} /> Log trade</button></div></header>;
+  return <header className="topbar"><button className="menu-button" onClick={onMenu} aria-label={navCollapsed ? 'Open navigation' : 'Toggle navigation'} title={navCollapsed ? 'Open navigation' : 'Toggle navigation'}><Menu size={20} /></button><div className="topbar-title"><p>{eyebrow}</p><h1>{title}</h1><span className="topbar-account"><WalletCards size={12} /> {activeAccount.name}</span></div><div className="top-actions"><div className="today"><CalendarDays size={15} />{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div><button className="round-button theme-toggle" onClick={onTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>{theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}</button><button className="primary-button" onClick={onNewTrade}><Plus size={16} /> Log trade</button></div><div className="account-strip" aria-label="Account status"><div><span>BALANCE</span><b>{plainMoney(balance)}</b></div><div><span>OPEN P&amp;L</span><b className="positive">{money(openPnl)}</b></div><div><span>EQUITY</span><b>{plainMoney(equity)}</b></div></div></header>;
 }
 
 function Dashboard({ data, totalPnl, todayPnl, todayTrades, activePlan, go, theme }) {
@@ -243,7 +276,7 @@ function EquityPanel({ trades, start, theme }) {
   const firstTradeTime = sorted.length ? new Date(sorted[0].date).getTime() : Date.now();
   const points = [[firstTradeTime - 3600000, start], ...sorted.map(trade => [new Date(trade.date).getTime(), running += Number(trade.pnl) || 0])];
   const chartLine = theme === 'dark' ? '#292d38' : '#f0f1f5';
-  const option = { animation: false, grid: { left: 8, right: 8, top: 18, bottom: 8, containLabel: true }, tooltip: { trigger: 'axis', triggerOn: 'mousemove|click', alwaysShowContent: true, hideDelay: 60000, enterable: true, confine: true, valueFormatter: v => plainMoney(v) }, xAxis: { type: 'time', axisLabel: { color: '#84909c', fontSize: 10 }, axisLine: { lineStyle: { color: chartLine } }, splitLine: { show: false } }, yAxis: { type: 'value', scale: true, position: 'right', axisLabel: { color: '#84909c', fontSize: 10, formatter: v => Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${Number(v).toFixed(0)}` }, splitLine: { lineStyle: { color: chartLine } } }, series: [{ type: 'line', data: trades.length ? points : [], showSymbol: false, smooth: .28, lineStyle: { color: '#6e8eaa', width: 2 }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#6e8eaa34' }, { offset: 1, color: '#6e8eaa00' }] } } }] };
+  const option = { animation: false, grid: { left: 8, right: 8, top: 18, bottom: 8, containLabel: true }, tooltip: { trigger: 'axis', triggerOn: 'mousemove', alwaysShowContent: false, hideDelay: 80, enterable: false, confine: true, valueFormatter: v => plainMoney(v) }, xAxis: { type: 'time', axisLabel: { color: '#84909c', fontSize: 12 }, axisLine: { lineStyle: { color: chartLine } }, splitLine: { show: false } }, yAxis: { type: 'value', scale: true, position: 'right', axisLabel: { color: '#84909c', fontSize: 12, formatter: v => Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${Number(v).toFixed(0)}` }, splitLine: { lineStyle: { color: chartLine } } }, series: [{ type: 'line', data: trades.length ? points : [], showSymbol: false, smooth: .28, lineStyle: { color: '#6e8eaa', width: 2 }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#6e8eaa34' }, { offset: 1, color: '#6e8eaa00' }] } } }] };
   return <section className="surface equity-surface"><SectionTitle eyebrow="ACCOUNT GROWTH" title="Equity curve" action="All time" />{trades.length ? <ReactECharts option={option} style={{ height: 180 }} /> : <EmptyState icon={TrendingUp} title="Your equity curve starts here" text="Log your first completed trade to begin tracking account growth." />}</section>;
 }
 
@@ -268,7 +301,7 @@ function RecentTrades({ trades, go }) {
 function Terminal({ symbol, setSymbol, timeframe, setTimeframe, market, theme }) {
   return <div className="terminal-page terminal-chart-only">
     <section className="market-workspace surface">
-      <div className="instrument-bar"><div className="instrument-tabs">{Object.entries(INSTRUMENTS).map(([key, meta]) => <button key={key} className={symbol === key ? 'active' : ''} onClick={() => setSymbol(key)}><i className={meta.accent}>{meta.icon}</i><span><b>{meta.label}</b><small>{meta.name}</small></span></button>)}</div><FeedStatus market={market} /></div>
+      <div className="instrument-bar"><div className="instrument-tabs">{Object.entries(INSTRUMENTS).map(([key, meta]) => <button key={key} className={symbol === key ? 'active' : ''} onClick={() => setSymbol(key)}><InstrumentMark symbol={key} size={36} /><span><b>{meta.label}</b><small>{meta.name}</small></span></button>)}</div><FeedStatus market={market} /></div>
       <MarketChart symbol={symbol} timeframe={timeframe} setTimeframe={setTimeframe} market={market} theme={theme} />
     </section>
   </div>;
@@ -312,7 +345,7 @@ function Journal({ trades, sessions, onAdd, onReview, onDelete }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const filtered = trades.filter(t => `${t.symbol} ${t.setup} ${t.emotion}`.toLowerCase().includes(query.toLowerCase()));
   const addFromDay = date => { setSelectedDate(null); onAdd(date); };
-  return <div className="page-stack"><div className="page-intro"><div><p>PRIVATE JOURNAL</p><h2>Every trade tells you something.</h2><span>Capture execution, emotion and lessons while context is fresh.</span></div></div><div className="journal-grid"><JournalCalendar trades={trades} sessions={sessions} month={month} setMonth={setMonth} onSelect={setSelectedDate} /><JournalInsight trades={trades} /></div><section className="surface journal-list"><div className="section-toolbar"><SectionTitle eyebrow="TRADE HISTORY" title={`${trades.length} journal entries`} /><div className="search-box"><Search size={15} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search trades" /></div></div>{filtered.length ? <div className="table-scroll"><table><thead><tr><th>Instrument</th><th>Date</th><th>Setup</th><th>Side</th><th>Grade</th><th>Net result</th><th></th></tr></thead><tbody>{filtered.map(t => <tr key={t.id}><td><Instrument symbol={t.symbol} /></td><td>{new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}</td><td>{t.setup || '—'}</td><td className={t.side === 'buy' ? 'positive' : 'negative'}>{t.side === 'buy' ? 'Long' : 'Short'}</td><td><span className="grade">{t.grade || '—'}</span></td><td className={t.pnl >= 0 ? 'positive' : 'negative'}><b>{money(t.pnl)}</b></td><td className="row-actions"><button onClick={() => onReview(t)}>Review</button><button className="icon-danger" onClick={() => onDelete(t.id)}><Trash2 size={14} /></button></td></tr>)}</tbody></table></div> : <EmptyState icon={BookOpen} title="No matching journal entries" text={trades.length ? 'Change your search to see more trades.' : 'Your journal is empty. Click a calendar date to add your first real trade.'} />}</section>{selectedDate && <JournalDayPanel date={selectedDate} trades={trades} sessions={sessions} onClose={() => setSelectedDate(null)} onAdd={addFromDay} />}</div>;
+  return <div className="page-stack journal-workspace"><div className="journal-grid"><JournalCalendar trades={trades} sessions={sessions} month={month} setMonth={setMonth} onSelect={setSelectedDate} /><JournalInsight trades={trades} /></div><section className="surface journal-list"><div className="section-toolbar"><SectionTitle eyebrow="Trade archive" title={`${trades.length} journal entries`} /><div className="search-box"><Search size={15} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search setup, market or emotion" /></div></div>{filtered.length ? <div className="table-scroll"><table><thead><tr><th>Instrument</th><th>Date</th><th>Setup</th><th>Side</th><th>Grade</th><th>Evidence</th><th>Net result</th><th></th></tr></thead><tbody>{filtered.map(t => <tr key={t.id}><td><Instrument symbol={t.symbol} /></td><td>{new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}</td><td><div className="setup-cell"><b>{t.setup || '—'}</b><small>{t.management || t.note || 'Review not added'}</small></div></td><td className={t.side === 'buy' ? 'positive' : 'negative'}>{t.side === 'buy' ? 'Long' : 'Short'}</td><td><span className="grade">{t.grade || '—'}</span></td><td>{t.images?.length ? <span className="evidence-count"><Camera size={12} /> {t.images.length}</span> : <span className="no-evidence">—</span>}</td><td className={t.pnl >= 0 ? 'positive' : 'negative'}><b>{money(t.pnl)}</b></td><td className="row-actions"><button onClick={() => onReview(t)}><Pencil size={12} /> Edit trade</button><button className="icon-danger" onClick={() => onDelete(t.id)}><Trash2 size={14} /></button></td></tr>)}</tbody></table></div> : <EmptyState icon={BookOpen} title="No matching journal entries" text={trades.length ? 'Change your search to see more trades.' : 'Your journal is empty. Click a calendar date to add your first real trade.'} />}</section>{selectedDate && <JournalDayPanel date={selectedDate} trades={trades} sessions={sessions} onClose={() => setSelectedDate(null)} onAdd={addFromDay} />}</div>;
 }
 
 function JournalCalendar({ trades, sessions, month, setMonth, onSelect }) {
@@ -370,7 +403,7 @@ function PerformanceCharts({ trades, theme }) {
   const ink = theme === 'dark' ? '#dce7f5' : '#263448';
   const muted = theme === 'dark' ? '#748096' : '#8b95a6';
   const gridLine = theme === 'dark' ? '#17273b' : '#e7edf5';
-  const tooltip = { triggerOn: 'mousemove|click', alwaysShowContent: true, hideDelay: 60000, enterable: true, confine: true, backgroundColor: theme === 'dark' ? '#07101d' : '#fff', borderColor: theme === 'dark' ? '#1d3857' : '#dce5f2', textStyle: { color: ink, fontSize: 13 } };
+  const tooltip = { triggerOn: 'mousemove', alwaysShowContent: false, hideDelay: 80, enterable: false, confine: true, backgroundColor: theme === 'dark' ? '#07101d' : '#fff', borderColor: theme === 'dark' ? '#1d3857' : '#dce5f2', textStyle: { color: ink, fontSize: 15 } };
   const equityOption = { animation: false, tooltip: { ...tooltip, trigger: 'axis', valueFormatter: value => money(value) }, grid: { left: 16, right: 16, top: 24, bottom: 28, containLabel: true }, xAxis: { type: 'category', boundaryGap: false, data: equity.map(point => point.date), axisLabel: { color: muted, fontSize: 12, hideOverlap: true }, axisLine: { lineStyle: { color: gridLine } } }, yAxis: { type: 'value', scale: true, axisLabel: { color: muted, fontSize: 12, formatter: value => `$${value}` }, splitLine: { lineStyle: { color: gridLine } } }, series: [{ name: 'Net P&L', type: 'line', data: equity.map(point => point.value), showSymbol: equity.length < 15, symbolSize: 7, smooth: .22, lineStyle: { color: '#2f86ff', width: 3 }, itemStyle: { color: '#2f86ff' }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#2f86ff55' }, { offset: 1, color: '#2f86ff00' }] } }, markLine: { silent: true, symbol: 'none', label: { show: false }, lineStyle: { color: muted, opacity: .4 }, data: [{ yAxis: 0 }] } }] };
   const outcomeOption = { animation: false, tooltip: { ...tooltip, trigger: 'item', formatter: '{b}: {c} ({d}%)' }, legend: { bottom: 0, textStyle: { color: muted, fontSize: 12 } }, series: [{ type: 'pie', radius: ['55%', '76%'], center: ['50%', '44%'], avoidLabelOverlap: true, label: { color: ink, fontSize: 13, formatter: '{c}' }, labelLine: { lineStyle: { color: muted } }, data: outcomes }] };
   const activityOption = { animation: false, tooltip: { ...tooltip, trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: params => { const index = params[0]?.dataIndex || 0, [date, value] = activity[index] || []; return `${date || ''}<br/>${value?.trades || 0} trade${value?.trades === 1 ? '' : 's'} · ${money(value?.pnl || 0)}`; } }, grid: { left: 12, right: 12, top: 22, bottom: 30, containLabel: true }, xAxis: { type: 'category', data: activity.map(([date]) => new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })), axisLabel: { color: muted, fontSize: 12, hideOverlap: true }, axisLine: { lineStyle: { color: gridLine } }, axisTick: { show: false } }, yAxis: { type: 'value', scale: true, axisLabel: { color: muted, fontSize: 12 }, splitLine: { lineStyle: { color: gridLine } } }, series: [{ type: 'bar', barMaxWidth: 28, data: activity.map(([, value]) => ({ value: value.pnl, itemStyle: { color: value.pnl >= 0 ? '#20c997' : '#ef6673', borderRadius: value.pnl >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4] } })) }] };
@@ -490,10 +523,10 @@ function Premarket({ routine, activePlan, patch, go }) {
   return <div className="premarket-layout"><section className="surface routine-card"><div className="routine-header"><div><p>SESSION CHECKLIST</p><h2>Preparation creates permission.</h2><span>Execution unlocks when your process is complete.</span></div><div className={`progress-ring ${routine.complete ? 'done' : ''}`}><b>{routine.checks.filter(Boolean).length}</b><small>/ 5</small></div></div><div className="check-list">{CHECKS.map((label, index) => <button key={label} className={routine.checks[index] ? 'checked' : ''} onClick={() => toggle(index)}><i>{routine.checks[index] && <Check size={15} />}</i><span>{label}</span><em>{routine.checks[index] ? 'Complete' : 'Mark done'}</em></button>)}</div><div className="routine-fields"><Field label="Session bias"><select value={routine.bias} onChange={e => update({ bias: e.target.value })}><option value="">Select a directional bias</option><option>Bullish</option><option>Bearish</option><option>Neutral / wait</option></select></Field><Field label="Key levels and market context"><textarea value={routine.notes} onChange={e => update({ notes: e.target.value })} placeholder="Important levels, scheduled events, invalidation conditions…" /></Field></div><button className="primary-button complete-button" disabled={!ready} onClick={complete}>{routine.complete ? <><Check size={16} /> Routine completed</> : <>Complete pre-market <ArrowUpRight size={16} /></>}</button></section><aside className="premarket-aside"><section className="surface active-plan-card"><p>ACTIVE PLAYBOOK</p>{activePlan ? <><div className="plan-symbol"><Target size={20} /></div><h2>{activePlan.name}</h2><span>{activePlan.market || 'All connected markets'}</span><ul>{activePlan.rules.slice(0, 4).map(rule => <li key={rule}><Check size={13} />{rule}</li>)}</ul></> : <><div className="plan-symbol muted"><Target size={20} /></div><h2>No active playbook</h2><span>Create and select a strategy to complete preparation.</span><button onClick={() => go('plans')}>Create playbook <ArrowUpRight size={14} /></button></>}</section><section className={`session-state ${routine.complete ? 'ready' : ''}`}><ShieldCheck size={20} /><div><b>{routine.complete ? 'Session unlocked' : 'Execution locked'}</b><span>{routine.complete ? 'Your preparation is saved.' : 'Finish the checklist to enable orders.'}</span></div></section></aside></div>;
 }
 
-function Plans({ plans, patch, onAdd }) {
+function Plans({ plans, patch, onAdd, onEdit }) {
   return <div className="page-stack"><div className="page-intro"><div><p>STRATEGY LIBRARY</p><h2>Build the decision path behind your edge.</h2><span>Create a visible trading flow from context to review.</span></div><button className="primary-button" onClick={onAdd}><Plus size={16} /> New flow</button></div>{plans.length ? <div className="plan-grid">{plans.map(plan => {
     const flow = plan.flow?.length ? plan.flow : (plan.rules || []).map((text, index) => ({ id: `${plan.id}-${index}`, type: index === 0 ? 'Trigger' : index === (plan.rules || []).length - 1 ? 'Entry' : 'Confirmation', text }));
-    return <article className={`surface plan-card ${plan.active ? 'active' : ''}`} key={plan.id}><div className="plan-top"><span>{plan.active ? '● ACTIVE FLOW' : 'TRADE FLOW'}</span><Target size={18} /></div><h2>{plan.name}</h2><p>{plan.market || 'All connected markets'}</p><PlaybookFlow steps={flow} compact /><footer><button onClick={() => patch(next => next.plans.forEach(p => p.active = p.id === plan.id))}>{plan.active ? 'Currently active' : 'Set active'}</button><button className="icon-danger" onClick={() => patch(next => next.plans = next.plans.filter(p => p.id !== plan.id))}><Trash2 size={14} /></button></footer></article>;
+    return <article className={`surface plan-card ${plan.active ? 'active' : ''}`} key={plan.id}><div className="plan-top"><span>{plan.active ? '● ACTIVE PLAYBOOK' : 'TRADE PLAYBOOK'}</span><Target size={18} /></div><h2>{plan.name}</h2><p>{plan.market || 'All connected markets'}</p>{plan.images?.length ? <div className="plan-image-strip">{plan.images.slice(0, 3).map((image, index) => <figure key={image.id || index}><img src={image.url} alt={`${plan.name} example ${index + 1}`} />{index === 2 && plan.images.length > 3 && <span>+{plan.images.length - 3}</span>}</figure>)}</div> : null}{plan.entryModel && <div className="plan-thesis"><small>ENTRY MODEL</small><b>{plan.entryModel}</b></div>}<div className="plan-rule-counts"><span><b>{plan.entryCriteria?.length || 0}</b> entry criteria</span><span><b>{plan.managementRules?.length || 0}</b> management rules</span><span><b>{plan.exitCriteria?.length || 0}</b> exits</span></div><PlaybookFlow steps={flow} compact /><footer><button onClick={() => patch(next => next.plans.forEach(p => p.active = p.id === plan.id))}>{plan.active ? 'Currently active' : 'Set active'}</button><button className="plan-edit-button" onClick={() => onEdit(plan)}><Pencil size={13} /> Edit</button><button className="icon-danger" onClick={() => patch(next => next.plans = next.plans.filter(p => p.id !== plan.id))}><Trash2 size={14} /></button></footer></article>;
   })}</div> : <EmptyState large icon={Target} title="Build your first trading flow" text="Map each real decision from context and trigger through execution and review." action="Create flow" onAction={onAdd} />}</div>;
 }
 
@@ -507,26 +540,27 @@ function RiskSettings({ settings, patch, account }) {
 }
 
 function TradeModal({ plans, initialDate, onClose, onSave }) {
-  const [form, setForm] = useState({ symbol: 'BTCUSD', side: 'buy', setup: '', entry: '', exit: '', pnl: '', fees: 0, emotion: 'Focused', grade: 'A', note: '', plan: Boolean(plans.find(p => p.active)), date: toLocalDateTimeValue(initialDate || new Date()) });
+  const [form, setForm] = useState({ symbol: 'XAUUSD', side: 'buy', setup: '', entry: '', exit: '', pnl: '', fees: 0, emotion: 'Focused', exitEmotion: 'Focused', grade: 'A', management: '', mistakes: '', note: '', images: [], plan: Boolean(plans.find(p => p.active)), date: toLocalDateTimeValue(initialDate || new Date()) });
   const [error, setError] = useState('');
   const submit = e => { e.preventDefault(); if (!form.setup.trim() || form.pnl === '') return setError('Setup and net P&L are required.'); const pnl = Number(form.pnl), fees = Number(form.fees || 0); if (!Number.isFinite(pnl)) return setError('Enter a valid P&L.'); onSave({ ...form, pnl: pnl - fees, fees, entry: form.entry === '' ? null : Number(form.entry), exit: form.exit === '' ? null : Number(form.exit), date: new Date(form.date).toISOString() }); };
   const field = (key, value) => setForm(current => ({ ...current, [key]: value }));
-  return <Modal onClose={onClose} eyebrow="NEW JOURNAL ENTRY" title={initialDate ? `Add trade · ${new Date(initialDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Record a completed trade'}><form onSubmit={submit}><div className="modal-grid"><Field label="Instrument"><select value={form.symbol} onChange={e => field('symbol', e.target.value)}><option value="BTCUSD">BTC / USD</option><option value="XAUUSD">XAU / USD</option><option value="EURUSD">EUR / USD</option><option value="NAS100">NAS100</option></select></Field><Field label="Direction"><select value={form.side} onChange={e => field('side', e.target.value)}><option value="buy">Long / Buy</option><option value="sell">Short / Sell</option></select></Field><Field label="Setup name"><input value={form.setup} onChange={e => field('setup', e.target.value)} placeholder="Your setup or playbook" /></Field><Field label="Trade time"><input type="datetime-local" value={form.date} onChange={e => field('date', e.target.value)} /></Field><Field label="Entry price"><input type="number" step="any" value={form.entry} onChange={e => field('entry', e.target.value)} placeholder="Optional" /></Field><Field label="Exit price"><input type="number" step="any" value={form.exit} onChange={e => field('exit', e.target.value)} placeholder="Optional" /></Field><Field label="Gross P&L"><NumberField value={form.pnl} onChange={value => field('pnl', value)} prefix="$" /></Field><Field label="Fees"><NumberField value={form.fees} onChange={value => field('fees', value)} prefix="$" /></Field><Field label="Emotion"><select value={form.emotion} onChange={e => field('emotion', e.target.value)}><option>Focused</option><option>Confident</option><option>Anxious</option><option>FOMO</option><option>Frustrated</option></select></Field><Field label="Execution grade"><select value={form.grade} onChange={e => field('grade', e.target.value)}><option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option><option>F</option></select></Field></div><label className="check-control"><input type="checkbox" checked={form.plan} onChange={e => field('plan', e.target.checked)} /><span><Check size={13} /></span>I followed my active playbook</label><Field label="Post-trade reflection"><textarea value={form.note} onChange={e => field('note', e.target.value)} placeholder="What worked? What did you feel? What will you repeat or change?" /></Field>{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">Save to journal</button></div></form></Modal>;
+  return <Modal onClose={onClose} eyebrow="New journal entry" title={initialDate ? `Add trade · ${new Date(initialDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Record a completed trade'}><form className="journal-entry-form" onSubmit={submit}><section className="journal-form-section"><header><span>01</span><div><small>TRADE DETAILS</small><b>Execution facts</b></div></header><div className="modal-grid"><Field label="Instrument"><select value={form.symbol} onChange={e => field('symbol', e.target.value)}><option value="BTCUSD">BTC / USD</option><option value="XAUUSD">XAU / USD</option><option value="EURUSD">EUR / USD</option><option value="NAS100">NAS100</option></select></Field><Field label="Direction"><select value={form.side} onChange={e => field('side', e.target.value)}><option value="buy">Long / Buy</option><option value="sell">Short / Sell</option></select></Field><Field label="Setup name"><input value={form.setup} onChange={e => field('setup', e.target.value)} placeholder="Your setup or playbook" /></Field><Field label="Trade time"><input type="datetime-local" value={form.date} onChange={e => field('date', e.target.value)} /></Field><Field label="Entry price"><input type="number" step="any" value={form.entry} onChange={e => field('entry', e.target.value)} placeholder="Optional" /></Field><Field label="Exit price"><input type="number" step="any" value={form.exit} onChange={e => field('exit', e.target.value)} placeholder="Optional" /></Field><Field label="Gross P&L"><NumberField value={form.pnl} onChange={value => field('pnl', value)} prefix="$" /></Field><Field label="Fees"><NumberField value={form.fees} onChange={value => field('fees', value)} prefix="$" /></Field></div></section><section className="journal-form-section"><header><span>02</span><div><small>PROCESS REVIEW</small><b>Management and psychology</b></div></header><div className="modal-grid"><Field label="Entry emotion"><select value={form.emotion} onChange={e => field('emotion', e.target.value)}><option>Focused</option><option>Confident</option><option>Anxious</option><option>FOMO</option><option>Frustrated</option></select></Field><Field label="Exit emotion"><select value={form.exitEmotion} onChange={e => field('exitEmotion', e.target.value)}><option>Focused</option><option>Confident</option><option>Relieved</option><option>Disappointed</option><option>Frustrated</option></select></Field><Field label="Trade management"><input value={form.management} onChange={e => field('management', e.target.value)} placeholder="e.g. Partial at 1R, stop to BE" /></Field><Field label="Mistakes / rule breaks"><input value={form.mistakes} onChange={e => field('mistakes', e.target.value)} placeholder="Optional" /></Field><Field label="Execution grade"><select value={form.grade} onChange={e => field('grade', e.target.value)}><option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option><option>F</option></select></Field></div><label className="check-control"><input type="checkbox" checked={form.plan} onChange={e => field('plan', e.target.checked)} /><span><Check size={13} /></span>I followed my active playbook</label><Field label="Post-trade reflection"><textarea value={form.note} onChange={e => field('note', e.target.value)} placeholder="What worked? What did you feel? What will you repeat or change?" /></Field></section><ImageUploader images={form.images} onChange={images => field('images', images)} title="Chart evidence" help="Add MTF, HTF, LTF, entry and exit screenshots." />{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">Save complete review</button></div></form></Modal>;
 }
 
-function PlanModal({ onClose, onSave }) {
+function PlanModal({ initialPlan, onClose, onSave }) {
   const makeStep = (type = 'Confirmation') => ({ id: uid(), type, text: '' });
-  const [name, setName] = useState(''), [market, setMarket] = useState(''), [steps, setSteps] = useState(() => [makeStep('Context'), makeStep('Trigger'), makeStep('Entry')]), [error, setError] = useState('');
+  const [name, setName] = useState(initialPlan?.name || ''), [market, setMarket] = useState(initialPlan?.market || ''), [entryModel, setEntryModel] = useState(initialPlan?.entryModel || ''), [entryCriteria, setEntryCriteria] = useState((initialPlan?.entryCriteria || []).join('\n')), [managementRules, setManagementRules] = useState((initialPlan?.managementRules || []).join('\n')), [exitCriteria, setExitCriteria] = useState((initialPlan?.exitCriteria || []).join('\n')), [images, setImages] = useState(initialPlan?.images || []), [steps, setSteps] = useState(() => initialPlan?.flow?.length ? initialPlan.flow.map(step => ({ ...step })) : [makeStep('Context'), makeStep('Trigger'), makeStep('Entry')]), [error, setError] = useState('');
   const updateStep = (id, changes) => setSteps(current => current.map(step => step.id === id ? { ...step, ...changes } : step));
   const moveStep = (index, direction) => setSteps(current => { const target = index + direction; if (target < 0 || target >= current.length) return current; const next = [...current]; [next[index], next[target]] = [next[target], next[index]]; return next; });
   const removeStep = id => setSteps(current => current.length === 1 ? current : current.filter(step => step.id !== id));
   const submit = e => {
     e.preventDefault();
     const flow = steps.map(step => ({ ...step, text: step.text.trim() })).filter(step => step.text);
-    if (!name.trim() || !flow.length) return setError('Add a flow name and describe at least one node.');
-    onSave({ id: uid(), name: name.trim(), market: market.trim(), flow, rules: flow.map(step => step.text), active: false });
+    const entries = listFromText(entryCriteria), management = listFromText(managementRules), exits = listFromText(exitCriteria);
+    if (!name.trim() || !entryModel.trim() || !entries.length || !flow.length) return setError('Add a playbook name, entry model, entry criteria and at least one flow node.');
+    onSave({ ...initialPlan, id: initialPlan?.id || uid(), name: name.trim(), market: market.trim(), entryModel: entryModel.trim(), entryCriteria: entries, managementRules: management, exitCriteria: exits, images, flow, rules: flow.map(step => step.text), active: initialPlan?.active || false });
   };
-  return <Modal onClose={onClose} eyebrow="NEW TRADE FLOW" title="Map your execution edge"><form className="playbook-flow-form" onSubmit={submit}><div className="flow-meta"><Field label="Flow name"><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. London liquidity sweep" autoFocus /></Field><Field label="Market focus"><input value={market} onChange={e => setMarket(e.target.value)} placeholder="e.g. XAUUSD · London session" /></Field></div><div className="flow-builder-layout"><section className="flow-editor"><header><div><p>FLOW NODES</p><h3>Build the decision sequence</h3></div><button type="button" onClick={() => setSteps(current => [...current, makeStep()])}><Plus size={13} /> Add node</button></header><div className="flow-step-editor-list">{steps.map((step, index) => <div className="flow-step-editor" key={step.id}><span>{String(index + 1).padStart(2, '0')}</span><select value={step.type} onChange={e => updateStep(step.id, { type: e.target.value })}>{FLOW_TYPES.map(type => <option key={type}>{type}</option>)}</select><input value={step.text} onChange={e => updateStep(step.id, { text: e.target.value })} placeholder="Describe the condition or action" /><div><button type="button" disabled={index === 0} onClick={() => moveStep(index, -1)} aria-label="Move node up">↑</button><button type="button" disabled={index === steps.length - 1} onClick={() => moveStep(index, 1)} aria-label="Move node down">↓</button><button type="button" disabled={steps.length === 1} onClick={() => removeStep(step.id)} aria-label="Delete node"><Trash2 size={12} /></button></div></div>)}</div></section><section className="flow-preview"><header><p>LIVE GRAPH</p><h3>Your trade flow</h3></header><PlaybookFlow steps={steps} /></section></div>{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">Save trade flow</button></div></form></Modal>;
+  return <Modal onClose={onClose} eyebrow={initialPlan ? 'Edit trade playbook' : 'New trade playbook'} title={initialPlan ? `Refine ${initialPlan.name}` : 'Define the full execution model'}><form className="playbook-flow-form" onSubmit={submit}><div className="flow-meta"><Field label="Playbook name"><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. London liquidity sweep" autoFocus /></Field><Field label="Market focus"><input value={market} onChange={e => setMarket(e.target.value)} placeholder="e.g. XAUUSD · London session" /></Field></div><section className="playbook-definition"><header><div><p>PLAYBOOK DEFINITION</p><h3>What must be true before, during and after entry</h3></div></header><div className="plan-definition-grid"><Field label="Entry model"><textarea value={entryModel} onChange={e => setEntryModel(e.target.value)} placeholder="Describe the market context, setup and trigger in plain language." /></Field><Field label="Entry criteria · one per line"><textarea value={entryCriteria} onChange={e => setEntryCriteria(e.target.value)} placeholder={'HTF bias aligned\nLiquidity sweep confirmed\n5m displacement closes'} /></Field><Field label="Trade management rules · one per line"><textarea value={managementRules} onChange={e => setManagementRules(e.target.value)} placeholder={'Partial 50% at 1R\nMove stop to break-even after 1R\nNo add-ons after first target'} /></Field><Field label="Exit criteria · one per line"><textarea value={exitCriteria} onChange={e => setExitCriteria(e.target.value)} placeholder={'Target opposing liquidity\nExit if structure invalidates\nClose before session end'} /></Field></div><ImageUploader images={images} onChange={setImages} title="Setup and entry examples" help="Upload every chart example needed to recognize and execute this playbook." /></section><div className="flow-builder-layout"><section className="flow-editor"><header><div><p>DECISION FLOW</p><h3>Build the execution sequence</h3></div><button type="button" onClick={() => setSteps(current => [...current, makeStep()])}><Plus size={13} /> Add node</button></header><div className="flow-step-editor-list">{steps.map((step, index) => <div className="flow-step-editor" key={step.id}><span>{String(index + 1).padStart(2, '0')}</span><select value={step.type} onChange={e => updateStep(step.id, { type: e.target.value })}>{FLOW_TYPES.map(type => <option key={type}>{type}</option>)}</select><input value={step.text} onChange={e => updateStep(step.id, { text: e.target.value })} placeholder="Describe the condition or action" /><div><button type="button" disabled={index === 0} onClick={() => moveStep(index, -1)} aria-label="Move node up">↑</button><button type="button" disabled={index === steps.length - 1} onClick={() => moveStep(index, 1)} aria-label="Move node down">↓</button><button type="button" disabled={steps.length === 1} onClick={() => removeStep(step.id)} aria-label="Delete node"><Trash2 size={12} /></button></div></div>)}</div></section><section className="flow-preview"><header><p>LIVE GRAPH</p><h3>Your trade flow</h3></header><PlaybookFlow steps={steps} /></section></div>{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">{initialPlan ? 'Save strategy changes' : 'Save complete playbook'}</button></div></form></Modal>;
 }
 
 function AccountModal({ onClose, onSave }) {
@@ -543,17 +577,30 @@ function AccountModal({ onClose, onSave }) {
 }
 
 function ReviewModal({ trade, onClose, onSave }) {
-  const [note, setNote] = useState(trade.note || ''), [emotion, setEmotion] = useState(trade.emotion || 'Focused'), [grade, setGrade] = useState(trade.grade || 'A');
-  return <Modal onClose={onClose} eyebrow="TRADE REVIEW" title={`${trade.symbol} · ${trade.setup}`}><div className="review-metrics"><div><span>Net result</span><b className={trade.pnl >= 0 ? 'positive' : 'negative'}>{money(trade.pnl)}</b></div><div><span>Direction</span><b>{trade.side === 'buy' ? 'Long' : 'Short'}</b></div><div><span>Entry → Exit</span><b>{trade.entry ?? '—'} → {trade.exit ?? '—'}</b></div><div><span>Playbook</span><b>{trade.plan ? 'Followed' : 'Off-plan'}</b></div></div><div className="modal-grid"><Field label="Emotion"><select value={emotion} onChange={e => setEmotion(e.target.value)}><option>Focused</option><option>Confident</option><option>Anxious</option><option>FOMO</option><option>Frustrated</option></select></Field><Field label="Execution grade"><select value={grade} onChange={e => setGrade(e.target.value)}><option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option><option>F</option></select></Field></div><Field label="Reflection"><textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Add your post-trade reflection…" /></Field><div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button" onClick={() => onSave({ note, emotion, grade })}>Save review</button></div></Modal>;
+  const [form, setForm] = useState({ ...trade, symbol: trade.symbol || 'XAUUSD', side: trade.side || 'buy', setup: trade.setup || '', entry: trade.entry ?? '', exit: trade.exit ?? '', pnl: trade.pnl ?? '', fees: trade.fees || 0, emotion: trade.emotion || 'Focused', exitEmotion: trade.exitEmotion || 'Focused', grade: trade.grade || 'A', management: trade.management || '', mistakes: trade.mistakes || '', note: trade.note || '', images: trade.images || [], plan: Boolean(trade.plan), date: toLocalDateTimeValue(trade.date || new Date()) });
+  const [error, setError] = useState('');
+  const field = (key, value) => setForm(current => ({ ...current, [key]: value }));
+  const submit = event => {
+    event.preventDefault();
+    if (!form.setup.trim() || form.pnl === '') return setError('Setup and net P&L are required.');
+    const pnl = Number(form.pnl), fees = Number(form.fees || 0), date = new Date(form.date);
+    if (!Number.isFinite(pnl) || !Number.isFinite(fees) || !Number.isFinite(date.getTime())) return setError('Check the P&L, fees and trade time.');
+    onSave({ ...form, pnl, fees, entry: form.entry === '' ? null : Number(form.entry), exit: form.exit === '' ? null : Number(form.exit), date: date.toISOString() });
+  };
+  const entryLabel = form.entry !== '' && Number.isFinite(Number(form.entry)) ? formatQuote(Number(form.entry)) : 'Not recorded';
+  const exitLabel = form.exit !== '' && Number.isFinite(Number(form.exit)) ? formatQuote(Number(form.exit)) : 'Not recorded';
+  const setupLabel = form.setup.trim() || 'Not specified';
+  return <Modal onClose={onClose} eyebrow={`${INSTRUMENTS[form.symbol]?.label || form.symbol} · Edit saved trade`} title={`Setup: ${setupLabel}`}><form className="journal-entry-form" onSubmit={submit}><div className="review-metrics"><div><span>Net result</span><b className={Number(form.pnl) >= 0 ? 'positive' : 'negative'}>{money(Number(form.pnl) || 0)}</b></div><div><span>Direction</span><b>{form.side === 'buy' ? 'Long' : 'Short'}</b></div><div><span>Entry → Exit</span><b>{entryLabel} → {exitLabel}</b></div><div><span>Playbook</span><b>{form.plan ? 'Followed' : 'Off-plan'}</b></div></div><section className="journal-form-section"><header><span>01</span><div><small>TRADE DETAILS</small><b>Edit execution facts</b></div></header><div className="modal-grid"><Field label="Instrument"><select value={form.symbol} onChange={event => field('symbol', event.target.value)}><option value="XAUUSD">XAU / USD</option><option value="BTCUSD">BTC / USD</option><option value="EURUSD">EUR / USD</option><option value="NAS100">NAS100</option></select></Field><Field label="Direction"><select value={form.side} onChange={event => field('side', event.target.value)}><option value="buy">Long / Buy</option><option value="sell">Short / Sell</option></select></Field><Field label="Setup name"><input value={form.setup} onChange={event => field('setup', event.target.value)} placeholder="Your setup or playbook" /></Field><Field label="Trade time"><input type="datetime-local" value={form.date} onChange={event => field('date', event.target.value)} /></Field><Field label="Entry price"><input type="number" step="any" value={form.entry} onChange={event => field('entry', event.target.value)} placeholder="Optional" /></Field><Field label="Exit price"><input type="number" step="any" value={form.exit} onChange={event => field('exit', event.target.value)} placeholder="Optional" /></Field><Field label="Net P&L"><NumberField value={form.pnl} onChange={value => field('pnl', value)} prefix="$" /></Field><Field label="Fees"><NumberField value={form.fees} onChange={value => field('fees', value)} prefix="$" /></Field></div></section><section className="journal-form-section"><header><span>02</span><div><small>PROCESS REVIEW</small><b>Edit management and psychology</b></div></header><div className="modal-grid"><Field label="Entry emotion"><select value={form.emotion} onChange={event => field('emotion', event.target.value)}><option>Focused</option><option>Confident</option><option>Anxious</option><option>FOMO</option><option>Frustrated</option></select></Field><Field label="Exit emotion"><select value={form.exitEmotion} onChange={event => field('exitEmotion', event.target.value)}><option>Focused</option><option>Confident</option><option>Relieved</option><option>Disappointed</option><option>Frustrated</option></select></Field><Field label="Trade management"><input value={form.management} onChange={event => field('management', event.target.value)} placeholder="Partials, stop movement, scaling…" /></Field><Field label="Mistakes / rule breaks"><input value={form.mistakes} onChange={event => field('mistakes', event.target.value)} placeholder="What deviated from the plan?" /></Field><Field label="Execution grade"><select value={form.grade} onChange={event => field('grade', event.target.value)}><option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option><option>F</option></select></Field></div><label className="check-control"><input type="checkbox" checked={form.plan} onChange={event => field('plan', event.target.checked)} /><span><Check size={13} /></span>I followed my active playbook</label><Field label="Reflection and lesson"><textarea value={form.note} onChange={event => field('note', event.target.value)} placeholder="What worked? What failed? What will you repeat next time?" /></Field></section><ImageUploader images={form.images} onChange={images => field('images', images)} title="Trade charts" help="Attach multiple MTF, HTF, LTF, entry and exit screenshots." />{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button"><Pencil size={14} /> Save trade changes</button></div></form></Modal>;
 }
 
 function ElefinCheckIn({ accountId, onClose, onStart }) {
   const [answers, setAnswers] = useState(() => Array(ELEFIN_CHECKS.length).fill(null));
   const [notes, setNotes] = useState(() => Array(ELEFIN_CHECKS.length).fill(''));
   const [emotion, setEmotion] = useState('');
-  const completed = answers.filter(Boolean).length;
-  const allAnswered = completed === ELEFIN_CHECKS.length;
-  const ready = allAnswered && Boolean(emotion);
+  const completed = ELEFIN_CHECKS.filter((_, index) => answers[index] && notes[index].trim()).length;
+  const allAnswered = answers.every(Boolean);
+  const allContextAdded = notes.every(note => note.trim());
+  const ready = allAnswered && allContextAdded && Boolean(emotion);
   const redCount = answers.filter(answer => answer === 'red').length;
 
   useEffect(() => {
@@ -589,25 +636,25 @@ function ElefinCheckIn({ accountId, onClose, onStart }) {
   return <Modal onClose={onClose} eyebrow="ELEFIN PRE-CHECK" title="Fill the Pre Check In form">
     <div className="elefin-checkin">
       <div className="elefin-intro">
-        <span className="elefin-intro-icon"><ShieldCheck size={21} /></span>
-        <div><b>Validate the market before execution</b><small>Choose green or red, then capture the context behind each decision.</small></div>
+        <span className="elefin-intro-icon"><img src="/elefin-icon.png" alt="" /></span>
+        <div><b>Validate the market before execution</b><small>Every decision and its written market context are required.</small></div>
         <strong>{completed}<small> / {ELEFIN_CHECKS.length}</small></strong>
       </div>
       <div className="elefin-progress" aria-label={`${completed} of ${ELEFIN_CHECKS.length} checks answered`}><i style={{ width: `${completed / ELEFIN_CHECKS.length * 100}%` }} /></div>
       <div className="precheck-list">
-        {ELEFIN_CHECKS.map((question, index) => <article className={`precheck-row ${answers[index] ? 'answered' : ''}`} key={question}>
+        {ELEFIN_CHECKS.map((question, index) => <article className={`precheck-row ${answers[index] ? 'answered' : ''} ${answers[index] && notes[index].trim() ? 'complete' : ''}`} key={question}>
           <div className="precheck-question"><span>{String(index + 1).padStart(2, '0')}</span><b>{question}</b></div>
           <div className="precheck-decisions" role="group" aria-label={`Decision for: ${question}`}>
-            <button type="button" className={`decision-button green ${answers[index] === 'green' ? 'active' : ''}`} onClick={() => choose(index, 'green')} aria-pressed={answers[index] === 'green'} aria-label="Mark green"><Check size={17} /><span>Green</span></button>
-            <button type="button" className={`decision-button red ${answers[index] === 'red' ? 'active' : ''}`} onClick={() => choose(index, 'red')} aria-pressed={answers[index] === 'red'} aria-label="Mark red"><X size={17} /><span>Red</span></button>
+            <button type="button" className={`decision-button green ${answers[index] === 'green' ? 'active' : ''}`} onClick={() => choose(index, 'green')} aria-pressed={answers[index] === 'green'} aria-label="Confirm condition" title="Confirm"><Check size={18} /></button>
+            <button type="button" className={`decision-button red ${answers[index] === 'red' ? 'active' : ''}`} onClick={() => choose(index, 'red')} aria-pressed={answers[index] === 'red'} aria-label="Reject condition" title="Reject"><X size={18} /></button>
           </div>
-          <label className="precheck-note"><span>Market context</span><textarea value={notes[index]} onChange={event => addContext(index, event.target.value)} placeholder="Add your observation, level, or reasoning…" rows="2" /></label>
+          <label className="precheck-note"><span>Market context · required</span><textarea value={notes[index]} onChange={event => addContext(index, event.target.value)} placeholder="Add your observation, level, or reasoning…" rows="2" required /></label>
         </article>)}
       </div>
       <section className="emotion-check"><div><span><Activity size={17} /></span><div><b>Emotion status</b><small>Record your state before you move into execution.</small></div></div><div className="emotion-options" role="radiogroup" aria-label="Emotion status">{ELEFIN_EMOTIONS.map(option => <button type="button" role="radio" aria-checked={emotion === option} className={emotion === option ? 'active' : ''} onClick={() => setEmotion(option)} key={option}>{option}</button>)}</div></section>
       <div className={`precheck-summary ${ready ? (redCount ? 'caution' : 'ready') : ''}`} aria-live="polite">
         <span>{ready ? (redCount ? <ShieldCheck size={17} /> : <Check size={17} />) : <Sparkles size={17} />}</span>
-        <div><b>{!allAnswered ? `${ELEFIN_CHECKS.length - completed} decision${ELEFIN_CHECKS.length - completed === 1 ? '' : 's'} remaining` : !emotion ? 'Choose your emotion status' : redCount ? `${redCount} red decision${redCount === 1 ? '' : 's'} noted` : 'Pre-check complete'}</b><small>{ready ? `Emotion: ${emotion} · Your check will be saved before opening Elefin.` : 'Complete the market decisions and emotion check to continue.'}</small></div>
+        <div><b>{!allAnswered ? 'Complete every decision' : !allContextAdded ? 'Add context to every step' : !emotion ? 'Choose your emotion status' : redCount ? `${redCount} caution flag${redCount === 1 ? '' : 's'} noted` : 'Pre-check complete'}</b><small>{ready ? `Emotion: ${emotion} · Your check will be saved before opening Elefin.` : `${ELEFIN_CHECKS.length - completed} required step${ELEFIN_CHECKS.length - completed === 1 ? '' : 's'} remaining.`}</small></div>
       </div>
       <div className="elefin-footer">
         <button type="button" className="secondary-button" onClick={onClose}>Not now</button>
@@ -631,10 +678,35 @@ function SessionStatusModal({ session, onAcknowledge, onCancel }) {
   </Modal>;
 }
 
+function ImageUploader({ images = [], onChange, title, help }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const addImages = async event => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (!files.length) return;
+    if (images.length + files.length > MAX_IMAGES) return setError(`You can keep up to ${MAX_IMAGES} screenshots in this record.`);
+    setBusy(true); setError('');
+    try {
+      const additions = [];
+      for (const file of files) additions.push(await compressUpload(file));
+      const next = [...images, ...additions];
+      const totalSize = next.reduce((sum, image) => sum + image.url.length, 0);
+      if (totalSize > MAX_IMAGE_STORE_SIZE) throw new Error('These compressed screenshots exceed the 1.2 MB record limit. Remove one or upload smaller images.');
+      onChange(next);
+    } catch (uploadError) {
+      setError(uploadError.message || 'Could not add these screenshots.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return <section className="image-uploader"><header><div><small>VISUAL EVIDENCE</small><h3>{title}</h3><p>{help}</p></div><label className={busy || images.length >= MAX_IMAGES ? 'disabled' : ''}><Camera size={14} />{busy ? 'Processing…' : 'Add screenshots'}<input type="file" accept="image/*" multiple onChange={addImages} disabled={busy || images.length >= MAX_IMAGES} /></label></header>{images.length ? <div className="image-preview-grid">{images.map((image, index) => <figure key={image.id || index}><img src={image.url} alt={`${title} ${index + 1}`} /><figcaption><span>{image.name || `Screenshot ${index + 1}`}</span><button type="button" onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove ${image.name || `screenshot ${index + 1}`}`}><X size={12} /></button></figcaption></figure>)}</div> : <div className="image-drop-empty"><Camera size={18} /><span>No screenshots yet · JPG, PNG or WebP</span></div>}{error && <div className="form-error">{error}</div>}<footer>{images.length}/{MAX_IMAGES} images · compressed for browser-local storage</footer></section>;
+}
+
 function Modal({ children, onClose, eyebrow, title }) { return <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && onClose()}><section className="modal-panel" role="dialog" aria-modal="true"><div className="modal-heading"><div><p>{eyebrow}</p><h2>{title}</h2></div><button onClick={onClose}><X size={18} /></button></div>{children}</section></div>; }
 function Field({ label, children }) { return <label className="field-label"><span>{label}</span>{children}</label>; }
 function NumberField({ value, onChange, suffix, prefix }) { return <div className="number-field">{prefix && <span>{prefix}</span>}<input type="number" step="any" value={value} onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))} />{suffix && <small>{suffix}</small>}</div>; }
-function Instrument({ symbol }) { const item = INSTRUMENTS[symbol] || { icon: symbol?.slice(0, 1), label: symbol, accent: 'violet' }; return <span className="instrument"><i className={item.accent}>{item.icon}</i><b>{item.label}</b></span>; }
+function Instrument({ symbol }) { const item = INSTRUMENTS[symbol] || { label: symbol, accent: 'violet' }; return <span className="instrument"><InstrumentMark symbol={symbol} size={26} /><b>{item.label}</b></span>; }
 function SectionTitle({ eyebrow, title, action, onAction }) { return <div className="section-title"><div><p>{eyebrow}</p><h2>{title}</h2></div>{action && <button onClick={onAction}>{action}<ArrowUpRight size={13} /></button>}</div>; }
 function EmptyState({ icon: Icon, title, text, action, onAction, small, large }) { return <div className={`empty-state ${small ? 'small' : ''} ${large ? 'large' : ''}`}><div><Icon size={large ? 26 : 21} /></div><b>{title}</b><span>{text}</span>{action && <button className="primary-button" onClick={onAction}>{action}</button>}</div>; }
 function TradeTable({ trades }) { return <div className="table-scroll"><table><thead><tr><th>Instrument</th><th>Setup</th><th>Direction</th><th>Date</th><th>Net result</th></tr></thead><tbody>{trades.map(t => <tr key={t.id}><td><Instrument symbol={t.symbol} /></td><td>{t.setup || '—'}</td><td className={t.side === 'buy' ? 'positive' : 'negative'}>{t.side === 'buy' ? 'Long' : 'Short'}</td><td>{new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</td><td className={t.pnl >= 0 ? 'positive' : 'negative'}><b>{money(t.pnl)}</b></td></tr>)}</tbody></table></div>; }
