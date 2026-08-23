@@ -102,7 +102,33 @@ function InstrumentMark({ symbol, size = 28 }) {
 
 function WorkspaceBootState({ status, error }) {
   const failed = status === 'error' || status === 'unauthorized';
-  return <main className="welcome-screen"><div className="welcome-aurora" aria-hidden="true" /><section className="welcome-card workspace-boot"><div className="welcome-top"><div className="welcome-brand">{failed ? <CloudOff size={20} /> : <Cloud size={20} />}</div><span className="welcome-wordmark">EDGETRADER <i>CLOUD</i></span></div><div className={`welcome-status ${failed ? 'failed' : ''}`}><span /> {failed ? 'Connection required' : 'Securing workspace'}</div><p>CLOUDFLARE D1</p><h1>{failed ? 'Workspace unavailable.' : 'Loading your workspace.'}</h1><span>{failed ? error : 'Identifying your Cloudflare Access account and loading its private journal.'}</span>{failed ? <button className="primary-button welcome-enter" onClick={() => window.location.reload()}><RefreshCw size={16} /> Try again</button> : <LoaderCircle className="workspace-loader" size={25} />}</section></main>;
+  return <main className="welcome-screen">
+    <div className="welcome-aurora" aria-hidden="true" />
+    <section className="welcome-card welcome-experience workspace-boot">
+      <header className="welcome-top">
+        <span className="welcome-wordmark">EDGETRADER <i>OS</i></span>
+        <div className={`welcome-status ${failed ? 'failed' : ''}`}><span /> {failed ? 'Connection required' : 'Securing workspace'}</div>
+      </header>
+      <div className="welcome-layout">
+        <div className="welcome-copy">
+          <p>CLOUDFLARE D1 WORKSPACE</p>
+          <h1>{failed ? <>Connection<br /><em>required.</em></> : <>Preparing your<br /><em>workspace.</em></>}</h1>
+          <span>{failed ? error : 'Verifying your Cloudflare Access identity and loading your private accounts, journal and playbooks.'}</span>
+          {failed ? <button className="primary-button welcome-enter" onClick={() => window.location.reload()}><RefreshCw size={16} /> Try again</button> : <div className="welcome-loading-state"><LoaderCircle className="workspace-loader" size={18} /><span>Loading encrypted workspace</span></div>}
+          <small className="welcome-identity">Your trading data remains private to your authenticated identity.</small>
+        </div>
+        <aside className={`welcome-account-panel welcome-boot-panel ${failed ? 'failed' : ''}`}>
+          <header><span>CLOUDFLARE ACCESS</span>{failed ? <CloudOff size={17} /> : <Cloud size={17} />}</header>
+          <div className="welcome-account-icon">{failed ? <CloudOff size={22} /> : <Cloud size={22} />}</div>
+          <small>{failed ? 'SESSION NOT VERIFIED' : 'PRIVATE IDENTITY'}</small>
+          <h2>{failed ? 'Unable to connect' : 'Identity verified'}</h2>
+          <p>{failed ? 'Retry the secure connection to continue.' : 'Your account-specific data is being synchronized.'}</p>
+          <div className="welcome-boot-progress" aria-hidden="true"><i /><i /><i /></div>
+          <footer><ShieldCheck size={14} /><span>Encrypted connection</span><i /><span>D1 storage</span></footer>
+        </aside>
+      </div>
+    </section>
+  </main>;
 }
 
 function WelcomeScreen({ account, accountCount, identity, needsAccountSetup, onEnter, onSetup }) {
