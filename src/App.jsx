@@ -109,7 +109,39 @@ function WelcomeScreen({ account, accountCount, identity, needsAccountSetup, onE
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const displayName = identity?.name?.trim() || identity?.email?.split('@')[0] || 'Trader';
-  return <main className="welcome-screen"><div className="welcome-aurora" aria-hidden="true" /><section className="welcome-card"><div className="welcome-top"><span className="welcome-wordmark">EDGETRADER <i>OS</i></span></div><div className="welcome-status"><span /> D1 workspace synced</div><p>WELCOME TO EDGETRADER</p><h1>{greeting}, {displayName}.</h1><span>{needsAccountSetup ? 'Your private workspace is ready. Set up your first trading account to begin journaling.' : <>Continue with <b>{account.name}</b>, or switch accounts after entering.</>}</span><div className="welcome-summary"><article><small>{needsAccountSetup ? 'CLOUDFLARE PROFILE' : 'ACTIVE ACCOUNT'}</small><b>{needsAccountSetup ? displayName : account.name}</b><span>{needsAccountSetup ? identity?.email : `${account.broker} · ${account.type}`}</span></article><article><small>TRADING ACCOUNTS</small><b>{needsAccountSetup ? 0 : accountCount}</b><span>{needsAccountSetup ? 'Create your first workspace' : `Independent account${accountCount === 1 ? '' : 's'}`}</span></article></div><button className="primary-button welcome-enter" onClick={needsAccountSetup ? onSetup : onEnter}>{needsAccountSetup ? <><Plus size={17} /> Set up first account</> : <>Enter EdgeTrader <ArrowUpRight size={17} /></>}</button><small className="welcome-security"><ShieldCheck size={13} /> Signed in as {identity?.email || 'Cloudflare Access user'} · Encrypted in transit</small></section></main>;
+  return <main className="welcome-screen">
+    <div className="welcome-aurora" aria-hidden="true" />
+    <section className="welcome-card welcome-experience">
+      <header className="welcome-top">
+        <span className="welcome-wordmark">EDGETRADER <i>OS</i></span>
+        <div className="welcome-status"><span /> D1 workspace synced</div>
+      </header>
+      <div className="welcome-layout">
+        <div className="welcome-copy">
+          <p>PRIVATE TRADING WORKSPACE</p>
+          <h1>{greeting},<br /><em>{displayName}.</em></h1>
+          <span>{needsAccountSetup ? 'Your secure workspace is ready. Create the first account that will hold your journal, playbooks and analytics.' : <>Everything for <b>{account.name}</b> is synced and ready for your next session.</>}</span>
+          <div className="welcome-actions">
+            <button className="primary-button welcome-enter" onClick={needsAccountSetup ? onSetup : onEnter}>{needsAccountSetup ? <><Plus size={17} /> Set up first account</> : <>Open workspace <ArrowUpRight size={17} /></>}</button>
+            <small className="welcome-security"><ShieldCheck size={14} /> Cloudflare Access secured</small>
+          </div>
+          <small className="welcome-identity">Signed in as <b>{identity?.email || 'Cloudflare Access user'}</b></small>
+        </div>
+        <aside className="welcome-account-panel">
+          <header><span>{needsAccountSetup ? 'SETUP REQUIRED' : 'ACTIVE WORKSPACE'}</span><Cloud size={17} /></header>
+          <div className="welcome-account-icon"><WalletCards size={22} /></div>
+          <small>{needsAccountSetup ? 'YOUR FIRST ACCOUNT' : 'READY TO CONTINUE'}</small>
+          <h2>{needsAccountSetup ? 'Create a trading account' : account.name}</h2>
+          <p>{needsAccountSetup ? 'Keep every trading account, risk profile and journal completely separate.' : `${account.broker} · ${account.type}`}</p>
+          <div className="welcome-summary">
+            <article><small>ACCOUNTS</small><b>{needsAccountSetup ? 0 : accountCount}</b><span>Independent workspaces</span></article>
+            <article><small>DATA</small><b>D1</b><span>Cloud synchronized</span></article>
+          </div>
+          <footer><ShieldCheck size={14} /><span>Private by identity</span><i /><span>Encrypted</span></footer>
+        </aside>
+      </div>
+    </section>
+  </main>;
 }
 
 export default function App() {
