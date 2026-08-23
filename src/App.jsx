@@ -82,6 +82,8 @@ const toLocalDateTimeValue = (value = new Date()) => {
   const date = new Date(value);
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 };
+const USER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local time';
+const USER_TIME_ZONE_LABEL = USER_TIME_ZONE.replaceAll('_', ' ');
 const updateStoredCheckinStatus = (id, status, accountId) => {
   try {
     const stored = JSON.parse(localStorage.getItem('northstar-elefin-checkins') || '[]');
@@ -107,7 +109,39 @@ function WelcomeScreen({ account, accountCount, identity, needsAccountSetup, onE
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const displayName = identity?.name?.trim() || identity?.email?.split('@')[0] || 'Trader';
-  return <main className="welcome-screen"><div className="welcome-aurora" aria-hidden="true" /><section className="welcome-card"><div className="welcome-top"><div className="welcome-brand"><Sparkles size={20} /></div><span className="welcome-wordmark">EDGETRADER <i>OS</i></span></div><div className="welcome-status"><span /> D1 workspace synced</div><p>WELCOME TO EDGETRADER</p><h1>{greeting}, {displayName}.</h1><span>{needsAccountSetup ? 'Your private workspace is ready. Set up your first trading account to begin journaling.' : <>Continue with <b>{account.name}</b>, or switch accounts after entering.</>}</span><div className="welcome-summary"><article><small>{needsAccountSetup ? 'CLOUDFLARE PROFILE' : 'ACTIVE ACCOUNT'}</small><b>{needsAccountSetup ? displayName : account.name}</b><span>{needsAccountSetup ? identity?.email : `${account.broker} · ${account.type}`}</span></article><article><small>TRADING ACCOUNTS</small><b>{needsAccountSetup ? 0 : accountCount}</b><span>{needsAccountSetup ? 'Create your first workspace' : `Independent account${accountCount === 1 ? '' : 's'}`}</span></article></div><button className="primary-button welcome-enter" onClick={needsAccountSetup ? onSetup : onEnter}>{needsAccountSetup ? <><Plus size={17} /> Set up first account</> : <>Enter EdgeTrader <ArrowUpRight size={17} /></>}</button><small className="welcome-security"><ShieldCheck size={13} /> Signed in as {identity?.email || 'Cloudflare Access user'} · Encrypted in transit</small></section></main>;
+  return <main className="welcome-screen">
+    <div className="welcome-aurora" aria-hidden="true" />
+    <section className="welcome-card welcome-experience">
+      <header className="welcome-top">
+        <span className="welcome-wordmark">EDGETRADER <i>OS</i></span>
+        <div className="welcome-status"><span /> D1 workspace synced</div>
+      </header>
+      <div className="welcome-layout">
+        <div className="welcome-copy">
+          <p>PRIVATE TRADING WORKSPACE</p>
+          <h1>{greeting},<br /><em>{displayName}.</em></h1>
+          <span>{needsAccountSetup ? 'Your secure workspace is ready. Create the first account that will hold your journal, playbooks and analytics.' : <>Everything for <b>{account.name}</b> is synced and ready for your next session.</>}</span>
+          <div className="welcome-actions">
+            <button className="primary-button welcome-enter" onClick={needsAccountSetup ? onSetup : onEnter}>{needsAccountSetup ? <><Plus size={17} /> Set up first account</> : <>Open workspace <ArrowUpRight size={17} /></>}</button>
+            <small className="welcome-security"><ShieldCheck size={14} /> Cloudflare Access secured</small>
+          </div>
+          <small className="welcome-identity">Signed in as <b>{identity?.email || 'Cloudflare Access user'}</b></small>
+        </div>
+        <aside className="welcome-account-panel">
+          <header><span>{needsAccountSetup ? 'SETUP REQUIRED' : 'ACTIVE WORKSPACE'}</span><Cloud size={17} /></header>
+          <div className="welcome-account-icon"><WalletCards size={22} /></div>
+          <small>{needsAccountSetup ? 'YOUR FIRST ACCOUNT' : 'READY TO CONTINUE'}</small>
+          <h2>{needsAccountSetup ? 'Create a trading account' : account.name}</h2>
+          <p>{needsAccountSetup ? 'Keep every trading account, risk profile and journal completely separate.' : `${account.broker} · ${account.type}`}</p>
+          <div className="welcome-summary">
+            <article><small>ACCOUNTS</small><b>{needsAccountSetup ? 0 : accountCount}</b><span>Independent workspaces</span></article>
+            <article><small>DATA</small><b>D1</b><span>Cloud synchronized</span></article>
+          </div>
+          <footer><ShieldCheck size={14} /><span>Private by identity</span><i /><span>Encrypted</span></footer>
+        </aside>
+      </div>
+    </section>
+  </main>;
 }
 
 export default function App() {
@@ -126,8 +160,8 @@ export default function App() {
   const [workspaceEntered, setWorkspaceEntered] = useState(() => sessionStorage.getItem('northstar-workspace-entered') === 'true');
   const sessions = data.sessions || [];
   const activePlan = data.plans.find(plan => plan.active);
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const todayTrades = data.trades.filter(t => t.date.slice(0, 10) === todayKey);
+  const todayKey = localDateKey(new Date());
+  const todayTrades = data.trades.filter(t => localDateKey(t.date) === todayKey);
   const todayPnl = todayTrades.reduce((sum, trade) => sum + trade.pnl, 0);
   const totalPnl = data.trades.reduce((sum, trade) => sum + trade.pnl, 0);
   const pendingSession = data.pendingSession || null;
@@ -172,11 +206,11 @@ export default function App() {
   if (!isHydrated) return <WorkspaceBootState status={syncStatus} error={syncError} />;
   if (!workspaceEntered || needsAccountSetup) return <><WelcomeScreen account={activeAccount} accountCount={accounts.length} identity={identity} needsAccountSetup={needsAccountSetup} onSetup={() => setAccountModal(true)} onEnter={() => { sessionStorage.setItem('northstar-workspace-entered', 'true'); setWorkspaceEntered(true); }} />{accountModal && <AccountModal required onClose={() => setAccountModal(false)} onSave={details => { createAccount(details); setAccountModal(false); }} />}</>;
 
-  return <div className={`app-shell theme-${theme} ${navCollapsed ? 'nav-collapsed' : ''}`}>
+  return <div className={`app-shell font-sans theme-${theme} ${navCollapsed ? 'nav-collapsed' : ''}`}>
     <button className="mobile-nav-toggle" onClick={toggleNavigation} aria-label="Open navigation"><Menu size={18} /></button>
     <Sidebar page={page} go={go} open={mobileNav} accounts={accounts} activeAccount={activeAccount} identity={identity} syncStatus={syncStatus} navCollapsed={navCollapsed} onToggleNavigation={toggleNavigation} onSwitchAccount={selectAccount} onAddAccount={() => setAccountModal(true)} onDeleteAccount={deleteAccount} />
     <main className="main-shell">
-      <Topbar page={page} onNewTrade={() => openTrade()} theme={theme} onTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} data={data} totalPnl={totalPnl} activeAccount={activeAccount} syncStatus={syncStatus} lastSyncedAt={lastSyncedAt} onSync={syncNow} />
+      <Topbar page={page} onNewTrade={() => openTrade()} theme={theme} onTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')} data={data} totalPnl={totalPnl} activeAccount={activeAccount} identity={identity} syncStatus={syncStatus} lastSyncedAt={lastSyncedAt} onSync={syncNow} />
       <div className="account-workspace" key={activeAccount.id}>
         {page === 'dashboard' && <Dashboard data={data} totalPnl={totalPnl} todayPnl={todayPnl} todayTrades={todayTrades} activePlan={activePlan} go={go} theme={theme} onCheckIn={() => setElefinModal(true)} />}
         {page === 'journal' && <Journal trades={data.trades} sessions={sessions} onAdd={openTrade} onReview={setReviewTrade} onDelete={id => patch(next => next.trades = next.trades.filter(t => t.id !== id))} />}
@@ -201,21 +235,13 @@ export default function App() {
   </div>;
 }
 
-function Sidebar({ page, go, open, accounts, activeAccount, identity, syncStatus, navCollapsed, onToggleNavigation, onSwitchAccount, onAddAccount, onDeleteAccount }) {
+function Sidebar({ page, go, open, accounts, activeAccount, syncStatus, navCollapsed, onToggleNavigation, onSwitchAccount, onAddAccount, onDeleteAccount }) {
   const [accountMenu, setAccountMenu] = useState(false);
-  const [profileMenu, setProfileMenu] = useState(false);
   const accountMenuRef = useRef(null);
-  const profileMenuRef = useRef(null);
   useEffect(() => {
-    if (!accountMenu && !profileMenu) return undefined;
+    if (!accountMenu) return undefined;
     const close = event => {
-      if (event.key === 'Escape') {
-        setAccountMenu(false);
-        setProfileMenu(false);
-        return;
-      }
-      if (event.type === 'pointerdown' && !accountMenuRef.current?.contains(event.target)) setAccountMenu(false);
-      if (event.type === 'pointerdown' && !profileMenuRef.current?.contains(event.target)) setProfileMenu(false);
+      if (event.key === 'Escape' || (event.type === 'pointerdown' && !accountMenuRef.current?.contains(event.target))) setAccountMenu(false);
     };
     document.addEventListener('pointerdown', close);
     document.addEventListener('keydown', close);
@@ -223,28 +249,14 @@ function Sidebar({ page, go, open, accounts, activeAccount, identity, syncStatus
       document.removeEventListener('pointerdown', close);
       document.removeEventListener('keydown', close);
     };
-  }, [accountMenu, profileMenu]);
-  const endSession = async () => {
-    setProfileMenu(false);
-    sessionStorage.removeItem('northstar-workspace-entered');
-    try {
-      await Promise.race([
-        fetch('/cdn-cgi/access/logout', { credentials: 'include', cache: 'no-store', redirect: 'manual' }),
-        new Promise(resolve => window.setTimeout(resolve, 1400)),
-      ]);
-    } catch {
-      // Public/local development does not expose a Cloudflare Access session.
-    }
-    window.location.reload();
-  };
-  const initials = (identity?.name || identity?.email || 'ET').split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+  }, [accountMenu]);
   return <aside className={`sidebar ${open ? 'open' : ''}`}>
-    <div className="sidebar-brand-row"><div className="logo"><span><Sparkles size={17} /></span><div>EdgeTrader<small>TRADING INTELLIGENCE</small></div></div><button className="sidebar-toggle" onClick={onToggleNavigation} aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}><Menu size={18} /></button></div>
+    <div className="sidebar-brand-row"><div className="logo"><div>EdgeTrader<small>TRADING INTELLIGENCE</small></div></div><button className="sidebar-toggle" onClick={onToggleNavigation} aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'} title={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}><Menu size={18} /></button></div>
     <nav>{NAV.map(([id, Icon, label]) => <button key={id} className={page === id ? 'active' : ''} onClick={() => go(id)} title={label} aria-label={label}><Icon size={18} /><span>{label}</span>{page === id && <i />}</button>)}</nav>
     <div className="sidebar-spacer" />
     <div className={`system-chip sync-${syncStatus}`}><i /> {syncStatus === 'saving' ? 'Saving to D1…' : syncStatus === 'synced' ? 'D1 cloud synced' : 'Cloud sync paused'}</div>
     <div className="account-switcher" ref={accountMenuRef}>
-      <button className="account-switcher-trigger" onClick={() => { setProfileMenu(false); setAccountMenu(current => !current); }} aria-expanded={accountMenu}>
+      <button className="account-switcher-trigger" onClick={() => setAccountMenu(current => !current)} aria-expanded={accountMenu}>
         <span><WalletCards size={17} /></span><div><b>{activeAccount.name}</b><small>{activeAccount.broker} · {activeAccount.type}</small></div><ChevronDown size={15} />
       </button>
       {accountMenu && <div className="account-menu">
@@ -256,19 +268,48 @@ function Sidebar({ page, go, open, accounts, activeAccount, identity, syncStatus
         <button className="account-add" onClick={() => { setAccountMenu(false); onAddAccount(); }}><Plus size={14} /> Create trading account</button>
       </div>}
     </div>
-    <div className="profile-menu-wrap" ref={profileMenuRef}><button className="user-card" onClick={() => { setAccountMenu(false); setProfileMenu(current => !current); }} aria-expanded={profileMenu}><span>{initials || 'ET'}</span><div><b>{identity?.name || 'EdgeTrader user'}</b><small title={identity?.email}>{identity?.email || 'Cloudflare Access'}</small></div><ChevronDown size={14} /></button>{profileMenu && <section className="profile-menu"><header><span>{initials || 'ET'}</span><div><small>CLOUDFLARE PROFILE</small><b>{identity?.name || 'EdgeTrader user'}</b><p>{identity?.email || 'Cloudflare Access identity'}</p></div></header><div className="profile-detail"><UserRound size={15} /><span><small>Profile</small><b>Cloudflare account member</b></span></div><div className="profile-detail"><BadgeCheck size={15} /><span><small>Workspace</small><b>D1 cloud sync active</b></span></div><button className="profile-logout" type="button" onClick={endSession}><LogOut size={15} /> Log out of Cloudflare session</button></section>}</div>
   </aside>;
 }
-
-function Topbar({ page, onNewTrade, theme, onTheme, data, totalPnl, activeAccount, syncStatus, lastSyncedAt, onSync }) {
+function Topbar({ page, onNewTrade, theme, onTheme, data, totalPnl, activeAccount, identity, syncStatus, lastSyncedAt, onSync }) {
   const [title, eyebrow] = TITLES[page];
   const openPnl = 0;
   const balance = Number(data.settings.startingBalance || 0) + totalPnl;
   const equity = balance + openPnl;
-  const syncLabel = syncStatus === 'saving' ? 'Syncing…' : lastSyncedAt ? `Synced ${new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Sync D1';
-  return <header className="topbar"><div className="topbar-title">{eyebrow && <p>{eyebrow}</p>}<h1>{title}</h1><span className="topbar-account"><WalletCards size={12} /> {activeAccount.name}</span></div><div className="top-actions"><button className={`d1-sync-button ${syncStatus}`} onClick={onSync} disabled={syncStatus === 'saving'} title="Save this account workspace to Cloudflare D1"><Cloud size={13} /><span>{syncLabel}</span><RefreshCw size={11} className={syncStatus === 'saving' ? 'spinning' : ''} /></button><div className="today"><CalendarDays size={15} />{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div><button className="round-button theme-toggle" onClick={onTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}>{theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}</button><button className="primary-button trade-button" onClick={onNewTrade}><Plus size={16} /> Log trade</button></div><div className="account-strip" aria-label="Account status"><div><span>BALANCE</span><b>{plainMoney(balance)}</b></div><div><span>OPEN P&amp;L</span><b className="positive">{money(openPnl)}</b></div><div><span>EQUITY</span><b>{plainMoney(equity)}</b></div></div></header>;
+  const syncTitle = syncStatus === 'saving' ? 'Syncing workspace to D1' : lastSyncedAt ? `D1 last synced at ${new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Sync workspace to D1';
+  return <header className="topbar"><div className="topbar-title">{eyebrow && <p>{eyebrow}</p>}<h1>{title}</h1><span className="topbar-account"><WalletCards size={12} /> {activeAccount.name}</span></div><div className="top-actions"><button className={`d1-sync-button icon-only ${syncStatus}`} onClick={onSync} disabled={syncStatus === 'saving'} title={syncTitle} aria-label={syncTitle}><Cloud size={14} /><RefreshCw size={10} className={syncStatus === 'saving' ? 'spinning' : ''} /></button><div className="today"><CalendarDays size={15} />{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div><button className="primary-button trade-button" onClick={onNewTrade}><Plus size={16} /> Log trade</button><HeaderUserMenu identity={identity} theme={theme} onTheme={onTheme} /></div><div className="account-strip" aria-label="Account status"><div><span>BALANCE</span><b>{plainMoney(balance)}</b></div><div><span>OPEN P&amp;L</span><b className="positive">{money(openPnl)}</b></div><div><span>EQUITY</span><b>{plainMoney(equity)}</b></div></div></header>;
 }
 
+function HeaderUserMenu({ identity, theme, onTheme }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+  const initials = (identity?.name || identity?.email || 'ET').split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = event => {
+      if (event.key === 'Escape' || (event.type === 'pointerdown' && !menuRef.current?.contains(event.target))) setOpen(false);
+    };
+    document.addEventListener('pointerdown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('pointerdown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [open]);
+  const endSession = async () => {
+    setOpen(false);
+    sessionStorage.removeItem('northstar-workspace-entered');
+    try {
+      await Promise.race([
+        fetch('/cdn-cgi/access/logout', { credentials: 'include', cache: 'no-store', redirect: 'manual' }),
+        new Promise(resolve => window.setTimeout(resolve, 1400)),
+      ]);
+    } catch {
+      // Local development does not expose a Cloudflare Access session.
+    }
+    window.location.reload();
+  };
+  return <div className="header-user-menu" ref={menuRef}><button type="button" className="header-user-trigger" onClick={() => setOpen(current => !current)} aria-expanded={open} aria-label="Open account menu"><span>{initials || 'ET'}</span><ChevronDown size={12} /></button>{open && <section className="header-profile-menu"><header><span>{initials || 'ET'}</span><div><small>EDGE TRADER PROFILE</small><b>{identity?.name || 'EdgeTrader user'}</b><p>{identity?.email || 'Cloudflare Access identity'}</p></div></header><button className="header-theme-option" type="button" onClick={onTheme}><span>{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}</span><div><b>Dark mode</b><small>{theme === 'dark' ? 'Enabled' : 'Disabled'}</small></div><i className={theme === 'dark' ? 'on' : ''}><u /></i></button><button className="profile-logout" type="button" onClick={endSession}><LogOut size={15} /> Log out of Cloudflare session</button></section>}</div>;
+}
 function Dashboard({ data, totalPnl, todayPnl, todayTrades, activePlan, go, theme, onCheckIn }) {
   const wins = data.trades.filter(t => t.pnl > 0), losses = data.trades.filter(t => t.pnl < 0), winRate = data.trades.length ? wins.length / data.trades.length * 100 : null;
   const grossWin = wins.reduce((s, t) => s + t.pnl, 0), grossLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
@@ -570,15 +611,27 @@ function RiskSettings({ settings, patch, account, identity, syncStatus }) {
   return <div className="settings-layout"><section className="surface settings-copy"><div className="settings-icon"><ShieldCheck size={22} /></div><p>RISK GOVERNANCE · {account.name}</p><h2>Rules that protect you before the click.</h2><span>These controls apply only to {account.name}. Switching accounts loads that account's own limits, journal and analytics.</span><div className="settings-note"><Sparkles size={16} /><div><b>Discipline by design</b><small>Guardrails are most useful when decided before the session.</small></div></div></section><form className="surface settings-form" onSubmit={save}><SectionTitle eyebrow="ACCOUNT LIMITS" title={`${account.name} controls`} /><div className="settings-grid"><Field label="Starting account balance"><NumberField value={form.startingBalance} onChange={value => setForm({ ...form, startingBalance: value })} prefix="$" /></Field><Field label="Maximum daily loss"><NumberField value={form.maxDailyLoss} onChange={value => setForm({ ...form, maxDailyLoss: value })} prefix="$" /></Field><Field label="Maximum trades per day"><NumberField value={form.maxTrades} onChange={value => setForm({ ...form, maxTrades: value })} /></Field><Field label="Default risk per trade"><NumberField value={form.riskPerTrade} onChange={value => setForm({ ...form, riskPerTrade: value })} prefix="$" /></Field></div><button className="primary-button save-settings">Save controls</button></form><section className="surface access-settings"><div><span><Database size={17} /></span><div><p>CLOUDFLARE D1</p><h3>{syncStatus === 'saving' ? 'Saving cloud workspace…' : 'Cloud workspace connected'}</h3><small>{identity?.email || 'Cloudflare Access user'} · Every account, journal entry, plan and session is isolated to this identity.</small></div></div></section></div>;
 }
 
-function TradeModal({ plans, initialDate, onClose, onSave }) {
-  const [form, setForm] = useState({ symbol: 'XAUUSD', side: 'buy', setup: '', entry: '', exit: '', pnl: '', fees: 0, emotion: 'Focused', exitEmotion: 'Focused', grade: 'A', management: '', mistakes: '', note: '', images: [], plan: Boolean(plans.find(p => p.active)), date: toLocalDateTimeValue(initialDate || new Date()) });
+function TradeModal({ plans = [], initialDate, onClose, onSave }) {
+  const defaultPlan = plans.find(plan => plan.active) || null;
+  const [form, setForm] = useState({ symbol: 'XAUUSD', side: 'buy', setup: 'None', entry: '', exit: '', pnl: '', fees: 0, emotion: 'Focused', exitEmotion: 'Focused', grade: 'A', management: '', mistakes: '', note: '', images: [], plan: Boolean(defaultPlan), playbookId: defaultPlan?.id || '', playbookName: defaultPlan?.name || '', date: toLocalDateTimeValue(initialDate || new Date()) });
   const [error, setError] = useState('');
-  const submit = e => { e.preventDefault(); if (!form.setup.trim() || form.pnl === '') return setError('Setup and net P&L are required.'); const pnl = Number(form.pnl), fees = Number(form.fees || 0); if (!Number.isFinite(pnl)) return setError('Enter a valid P&L.'); onSave({ ...form, pnl: pnl - fees, fees, entry: form.entry === '' ? null : Number(form.entry), exit: form.exit === '' ? null : Number(form.exit), date: new Date(form.date).toISOString() }); };
+  const submit = e => {
+    e.preventDefault();
+    if (!form.setup.trim() || form.pnl === '') return setError('Choose a setup and enter the net P&L.');
+    const pnl = Number(form.pnl), fees = Number(form.fees || 0);
+    if (!Number.isFinite(pnl)) return setError('Enter a valid P&L.');
+    const selectedPlaybook = plans.find(plan => plan.id === form.playbookId);
+    onSave({ ...form, plan: Boolean(selectedPlaybook), playbookId: selectedPlaybook?.id || null, playbookName: selectedPlaybook?.name || '', pnl: pnl - fees, fees, entry: form.entry === '' ? null : Number(form.entry), exit: form.exit === '' ? null : Number(form.exit), date: new Date(form.date).toISOString(), timeZone: USER_TIME_ZONE });
+  };
   const field = (key, value) => setForm(current => ({ ...current, [key]: value }));
-  return <Modal onClose={onClose} eyebrow="New journal entry" title={initialDate ? `Add trade · ${new Date(initialDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Record a completed trade'}><form className="journal-entry-form" onSubmit={submit}><section className="journal-form-section"><header><span>01</span><div><small>TRADE DETAILS</small><b>Execution facts</b></div></header><div className="modal-grid"><Field label="Instrument"><select value={form.symbol} onChange={e => field('symbol', e.target.value)}><option value="BTCUSD">BTC / USD</option><option value="XAUUSD">XAU / USD</option><option value="EURUSD">EUR / USD</option><option value="NAS100">NAS100</option></select></Field><Field label="Direction"><select value={form.side} onChange={e => field('side', e.target.value)}><option value="buy">Long / Buy</option><option value="sell">Short / Sell</option></select></Field><Field label="Setup name"><input value={form.setup} onChange={e => field('setup', e.target.value)} placeholder="Your setup or playbook" /></Field><Field label="Trade time"><input type="datetime-local" value={form.date} onChange={e => field('date', e.target.value)} /></Field><Field label="Entry price"><input type="number" step="any" value={form.entry} onChange={e => field('entry', e.target.value)} placeholder="Optional" /></Field><Field label="Exit price"><input type="number" step="any" value={form.exit} onChange={e => field('exit', e.target.value)} placeholder="Optional" /></Field><Field label="Gross P&L"><NumberField value={form.pnl} onChange={value => field('pnl', value)} prefix="$" /></Field><Field label="Fees"><NumberField value={form.fees} onChange={value => field('fees', value)} prefix="$" /></Field></div></section><section className="journal-form-section"><header><span>02</span><div><small>PROCESS REVIEW</small><b>Management and psychology</b></div></header><div className="modal-grid"><Field label="Entry emotion"><select value={form.emotion} onChange={e => field('emotion', e.target.value)}><option>Focused</option><option>Confident</option><option>Anxious</option><option>FOMO</option><option>Frustrated</option></select></Field><Field label="Exit emotion"><select value={form.exitEmotion} onChange={e => field('exitEmotion', e.target.value)}><option>Focused</option><option>Confident</option><option>Relieved</option><option>Disappointed</option><option>Frustrated</option></select></Field><Field label="Trade management"><input value={form.management} onChange={e => field('management', e.target.value)} placeholder="e.g. Partial at 1R, stop to BE" /></Field><Field label="Mistakes / rule breaks"><input value={form.mistakes} onChange={e => field('mistakes', e.target.value)} placeholder="Optional" /></Field><Field label="Execution grade"><select value={form.grade} onChange={e => field('grade', e.target.value)}><option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option><option>F</option></select></Field></div><label className="check-control"><input type="checkbox" checked={form.plan} onChange={e => field('plan', e.target.checked)} /><span><Check size={13} /></span>I followed my active playbook</label><Field label="Post-trade reflection"><textarea value={form.note} onChange={e => field('note', e.target.value)} placeholder="What worked? What did you feel? What will you repeat or change?" /></Field></section><ImageUploader images={form.images} onChange={images => field('images', images)} title="Chart evidence" help="Add MTF, HTF, LTF, entry and exit screenshots." />{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">Save complete review</button></div></form></Modal>;
+  const selectFollowedPlaybook = playbookId => {
+    const selected = plans.find(plan => plan.id === playbookId);
+    setForm(current => ({ ...current, plan: Boolean(selected), playbookId: selected?.id || '', playbookName: selected?.name || '' }));
+  };
+  return <Modal drawer onClose={onClose} eyebrow="New journal entry" title={initialDate ? `Add trade · ${new Date(initialDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Record a completed trade'}><form className="journal-entry-form" onSubmit={submit}><section className="journal-form-section"><header><span>01</span><div><small>TRADE DETAILS</small><b>Execution facts</b></div></header><div className="modal-grid"><Field label="Instrument"><select value={form.symbol} onChange={e => field('symbol', e.target.value)}><option value="BTCUSD">BTC / USD</option><option value="XAUUSD">XAU / USD</option><option value="EURUSD">EUR / USD</option><option value="NAS100">NAS100</option></select></Field><Field label="Direction"><select value={form.side} onChange={e => field('side', e.target.value)}><option value="buy">Long / Buy</option><option value="sell">Short / Sell</option></select></Field><Field label="Setup name"><select value={form.setup} onChange={e => field('setup', e.target.value)}><option value="None">None</option>{plans.map(plan => <option key={plan.id} value={plan.name}>{plan.name}{plan.active ? ' · Active' : ''}</option>)}</select></Field><Field label={`Trade time · ${USER_TIME_ZONE_LABEL}`}><input type="datetime-local" value={form.date} onChange={e => field('date', e.target.value)} /></Field><Field label="Entry price"><input type="number" step="any" value={form.entry} onChange={e => field('entry', e.target.value)} placeholder="Optional" /></Field><Field label="Exit price"><input type="number" step="any" value={form.exit} onChange={e => field('exit', e.target.value)} placeholder="Optional" /></Field><Field label="Gross P&L"><NumberField value={form.pnl} onChange={value => field('pnl', value)} prefix="$" /></Field><Field label="Fees"><NumberField value={form.fees} onChange={value => field('fees', value)} prefix="$" /></Field></div></section><section className="journal-form-section"><header><span>02</span><div><small>PROCESS REVIEW</small><b>Management and psychology</b></div></header><div className="modal-grid"><Field label="Entry emotion"><select value={form.emotion} onChange={e => field('emotion', e.target.value)}><option>Focused</option><option>Confident</option><option>Anxious</option><option>FOMO</option><option>Frustrated</option></select></Field><Field label="Exit emotion"><select value={form.exitEmotion} onChange={e => field('exitEmotion', e.target.value)}><option>Focused</option><option>Confident</option><option>Relieved</option><option>Disappointed</option><option>Frustrated</option></select></Field><Field label="Trade management"><input value={form.management} onChange={e => field('management', e.target.value)} placeholder="e.g. Partial at 1R, stop to BE" /></Field><Field label="Mistakes / rule breaks"><input value={form.mistakes} onChange={e => field('mistakes', e.target.value)} placeholder="Optional" /></Field><Field label="Execution grade"><select value={form.grade} onChange={e => field('grade', e.target.value)}><option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option><option>F</option></select></Field><Field label="Playbook followed"><select value={form.playbookId} onChange={e => selectFollowedPlaybook(e.target.value)}><option value="">Off-plan / no playbook followed</option>{plans.map(plan => <option key={plan.id} value={plan.id}>{plan.name}{plan.active ? ' · Active' : ''}</option>)}</select></Field></div><Field label="Post-trade reflection"><textarea value={form.note} onChange={e => field('note', e.target.value)} placeholder="What worked? What did you feel? What will you repeat or change?" /></Field></section><ImageUploader images={form.images} onChange={images => field('images', images)} title="Chart evidence" help="Add MTF, HTF, LTF, entry and exit screenshots." />{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">Save complete review</button></div></form></Modal>;
 }
 
-function PlanModal({ initialPlan, onClose, onSave }) {
+function LegacyPlanModal({ initialPlan, onClose, onSave }) {
   const makeStep = (type = 'Confirmation', scope = 'STF') => ({ id: uid(), type, scope, text: '' });
   const originalFlow = initialPlan?.flow || [];
   const existingEvidence = initialPlan?.timeframeImages || {};
@@ -614,7 +667,136 @@ function PlanModal({ initialPlan, onClose, onSave }) {
     if (!name.trim() || !entryModel.trim() || !entries.length || !flow.length) return setError('Add a playbook name, entry model, entry criteria and at least one flow node.');
     onSave({ ...initialPlan, id: initialPlan?.id || uid(), name: name.trim(), market: market.trim(), entryModel: entryModel.trim(), entryCriteria: entries, managementRules: management, exitCriteria: exits, images, timeframeImages, flow, timeframes: undefined, rules: flow.map(step => step.text), active: initialPlan?.active || false });
   };
-  return <Modal onClose={onClose} eyebrow={initialPlan ? 'Edit trade playbook' : 'New trade playbook'} title={initialPlan ? `Refine ${initialPlan.name}` : 'Define the full execution model'}><form className="playbook-flow-form" onSubmit={submit}><div className="flow-meta"><Field label="Playbook name"><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. London liquidity sweep" autoFocus /></Field><Field label="Market focus"><input value={market} onChange={e => setMarket(e.target.value)} placeholder="e.g. XAUUSD · London session" /></Field></div><section className="playbook-definition"><header><div><p>PLAYBOOK DEFINITION</p><h3>What must be true before, during and after entry</h3></div></header><div className="plan-definition-grid"><Field label="Entry model"><textarea value={entryModel} onChange={e => setEntryModel(e.target.value)} placeholder="Describe the market context, setup and trigger in plain language." /></Field><Field label="Entry criteria · one per line"><textarea value={entryCriteria} onChange={e => setEntryCriteria(e.target.value)} placeholder={'HTF bias aligned\nLiquidity sweep confirmed\n5m displacement closes'} /></Field><Field label="Trade management rules · one per line"><textarea value={managementRules} onChange={e => setManagementRules(e.target.value)} placeholder={'Partial 50% at 1R\nMove stop to break-even after 1R\nNo add-ons after first target'} /></Field><Field label="Exit criteria · one per line"><textarea value={exitCriteria} onChange={e => setExitCriteria(e.target.value)} placeholder={'Target opposing liquidity\nExit if structure invalidates\nClose before session end'} /></Field></div><ImageUploader images={images} onChange={setImages} title="Setup and entry examples" help="Upload every chart example needed to recognize and execute this playbook." /></section><section className="flow-filterbar"><div className="flow-link-map">{FLOW_SCOPES.map((scope, index) => <React.Fragment key={scope}><button type="button" className={flowScope === scope ? 'active' : ''} onClick={() => setFlowScope(scope)}><b>{scope}</b><small>{(timeframeImages[scope] || []).length} screenshot{(timeframeImages[scope] || []).length === 1 ? '' : 's'}</small></button>{index < FLOW_SCOPES.length - 1 && <ChevronRight size={14} />}</React.Fragment>)}</div><em>{visibleSteps.length} visible node{visibleSteps.length === 1 ? '' : 's'}</em></section><div className="flow-evidence-row">{FLOW_SCOPES.map(scope => <section className={`flow-timeframe-evidence ${flowScope === scope ? 'active' : ''}`} key={scope}><button type="button" className="flow-evidence-heading" onClick={() => setFlowScope(scope)}><span><b>{scope}</b><small>{steps.filter(step => step.scope === scope).length} flow node{steps.filter(step => step.scope === scope).length === 1 ? '' : 's'}</small></span><ChevronRight size={14} /></button><ImageUploader images={timeframeImages[scope] || []} onChange={nextImages => setTimeframeImages(current => ({ ...current, [scope]: nextImages }))} title={`${scope} chart`} help={`Add ${scope} structure evidence.`} /></section>)}</div><div className="flow-steps-row">{FLOW_SCOPES.map(scope => { const scopeSteps = steps.filter(step => step.scope === scope); return <section className="flow-layer-steps" key={scope}><header><div><p>{scope} STEPS</p><h3>{scope} execution path</h3></div><button type="button" onClick={() => setSteps(current => [...current, makeStep('Confirmation', scope)])}><Plus size={12} /> Add step</button></header><div className="flow-layer-step-list">{scopeSteps.length ? scopeSteps.map((step, index) => <div className="flow-layer-step" key={step.id}><span>{String(index + 1).padStart(2, '0')}</span><select value={step.type} onChange={e => updateStep(step.id, { type: e.target.value })}>{FLOW_TYPES.map(type => <option key={type}>{type}</option>)}</select><input value={step.text} onChange={e => updateStep(step.id, { text: e.target.value })} placeholder={`Add ${scope} condition or action`} /><div><button type="button" disabled={index === 0} onClick={() => moveScopeStep(scope, step.id, -1)} aria-label={`Move ${scope} step up`}>↑</button><button type="button" disabled={index === scopeSteps.length - 1} onClick={() => moveScopeStep(scope, step.id, 1)} aria-label={`Move ${scope} step down`}>↓</button><button type="button" disabled={steps.length === 1} onClick={() => removeStep(step.id)} aria-label={`Delete ${scope} step`}><Trash2 size={12} /></button></div></div>) : <div className="flow-filter-empty layer-empty"><Target size={16} /><b>No {scope} steps</b><span>Add the first condition for this layer.</span></div>}</div></section>; })}</div><div className="flow-builder-layout"><section className="flow-editor"><header><div><p>{flowScope}</p><h3>Build the execution sequence</h3></div><button type="button" onClick={() => setSteps(current => [...current, makeStep('Confirmation', flowScope)])}><Plus size={13} /> Add node</button></header><div className="flow-step-editor-list">{visibleSteps.length ? visibleSteps.map((step, index) => <div className="flow-step-editor" key={step.id}><span>{String(index + 1).padStart(2, '0')}</span><select value={step.type} onChange={e => updateStep(step.id, { type: e.target.value })}>{FLOW_TYPES.map(type => <option key={type}>{type}</option>)}</select><select value={step.scope} onChange={e => updateStep(step.id, { scope: e.target.value })}>{FLOW_SCOPES.map(scope => <option key={scope}>{scope}</option>)}</select><input value={step.text} onChange={e => updateStep(step.id, { text: e.target.value })} placeholder="Describe the condition or action" /><div><button type="button" disabled={index === 0} onClick={() => moveStep(step.id, -1)} aria-label="Move node up">↑</button><button type="button" disabled={index === visibleSteps.length - 1} onClick={() => moveStep(step.id, 1)} aria-label="Move node down">↓</button><button type="button" disabled={steps.length === 1} onClick={() => removeStep(step.id)} aria-label="Delete node"><Trash2 size={12} /></button></div></div>) : <div className="flow-filter-empty"><Target size={18} /><b>No {flowScope} nodes yet</b><span>Add a node to build this structure layer.</span></div>}</div></section><section className="flow-preview"><header><div><p>LIVE GRAPH</p><h3>{flowScope}</h3></div><span>{visibleSteps.length} node{visibleSteps.length === 1 ? '' : 's'}</span></header>{visibleSteps.length ? <PlaybookFlow steps={visibleSteps} /> : <div className="flow-filter-empty compact"><Target size={18} /><span>Nothing to display for this layer.</span></div>}</section></div>{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">{initialPlan ? 'Save strategy changes' : 'Save complete playbook'}</button></div></form></Modal>;
+  return <Modal drawer onClose={onClose} eyebrow={initialPlan ? 'Edit trade playbook' : 'New trade playbook'} title={initialPlan ? `Refine ${initialPlan.name}` : 'Define the full execution model'}><form className="playbook-flow-form" onSubmit={submit}><div className="flow-meta"><Field label="Playbook name"><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. London liquidity sweep" autoFocus /></Field><Field label="Market focus"><input value={market} onChange={e => setMarket(e.target.value)} placeholder="e.g. XAUUSD · London session" /></Field></div><section className="playbook-definition"><header><div><p>PLAYBOOK DEFINITION</p><h3>What must be true before, during and after entry</h3></div></header><div className="plan-definition-grid"><Field label="Entry model"><textarea value={entryModel} onChange={e => setEntryModel(e.target.value)} placeholder="Describe the market context, setup and trigger in plain language." /></Field><Field label="Entry criteria · one per line"><textarea value={entryCriteria} onChange={e => setEntryCriteria(e.target.value)} placeholder={'HTF bias aligned\nLiquidity sweep confirmed\n5m displacement closes'} /></Field><Field label="Trade management rules · one per line"><textarea value={managementRules} onChange={e => setManagementRules(e.target.value)} placeholder={'Partial 50% at 1R\nMove stop to break-even after 1R\nNo add-ons after first target'} /></Field><Field label="Exit criteria · one per line"><textarea value={exitCriteria} onChange={e => setExitCriteria(e.target.value)} placeholder={'Target opposing liquidity\nExit if structure invalidates\nClose before session end'} /></Field></div><ImageUploader images={images} onChange={setImages} title="Setup and entry examples" help="Upload every chart example needed to recognize and execute this playbook." /></section><section className="flow-filterbar"><div className="flow-link-map">{FLOW_SCOPES.map((scope, index) => <React.Fragment key={scope}><button type="button" className={flowScope === scope ? 'active' : ''} onClick={() => setFlowScope(scope)}><b>{scope}</b><small>{(timeframeImages[scope] || []).length} screenshot{(timeframeImages[scope] || []).length === 1 ? '' : 's'}</small></button>{index < FLOW_SCOPES.length - 1 && <ChevronRight size={14} />}</React.Fragment>)}</div><em>{visibleSteps.length} visible node{visibleSteps.length === 1 ? '' : 's'}</em></section><div className="flow-evidence-row">{FLOW_SCOPES.map(scope => <section className={`flow-timeframe-evidence ${flowScope === scope ? 'active' : ''}`} key={scope}><button type="button" className="flow-evidence-heading" onClick={() => setFlowScope(scope)}><span><b>{scope}</b><small>{steps.filter(step => step.scope === scope).length} flow node{steps.filter(step => step.scope === scope).length === 1 ? '' : 's'}</small></span><ChevronRight size={14} /></button><ImageUploader images={timeframeImages[scope] || []} onChange={nextImages => setTimeframeImages(current => ({ ...current, [scope]: nextImages }))} title={`${scope} chart`} help={`Add ${scope} structure evidence.`} /></section>)}</div><div className="flow-steps-row">{FLOW_SCOPES.map(scope => { const scopeSteps = steps.filter(step => step.scope === scope); return <section className="flow-layer-steps" key={scope}><header><div><p>{scope} STEPS</p><h3>{scope} execution path</h3></div><button type="button" onClick={() => setSteps(current => [...current, makeStep('Confirmation', scope)])}><Plus size={12} /> Add step</button></header><div className="flow-layer-step-list">{scopeSteps.length ? scopeSteps.map((step, index) => <div className="flow-layer-step" key={step.id}><span>{String(index + 1).padStart(2, '0')}</span><select value={step.type} onChange={e => updateStep(step.id, { type: e.target.value })}>{FLOW_TYPES.map(type => <option key={type}>{type}</option>)}</select><input value={step.text} onChange={e => updateStep(step.id, { text: e.target.value })} placeholder={`Add ${scope} condition or action`} /><div><button type="button" disabled={index === 0} onClick={() => moveScopeStep(scope, step.id, -1)} aria-label={`Move ${scope} step up`}>↑</button><button type="button" disabled={index === scopeSteps.length - 1} onClick={() => moveScopeStep(scope, step.id, 1)} aria-label={`Move ${scope} step down`}>↓</button><button type="button" disabled={steps.length === 1} onClick={() => removeStep(step.id)} aria-label={`Delete ${scope} step`}><Trash2 size={12} /></button></div></div>) : <div className="flow-filter-empty layer-empty"><Target size={16} /><b>No {scope} steps</b><span>Add the first condition for this layer.</span></div>}</div></section>; })}</div><div className="flow-builder-layout"><section className="flow-editor"><header><div><p>{flowScope}</p><h3>Build the execution sequence</h3></div><button type="button" onClick={() => setSteps(current => [...current, makeStep('Confirmation', flowScope)])}><Plus size={13} /> Add node</button></header><div className="flow-step-editor-list">{visibleSteps.length ? visibleSteps.map((step, index) => <div className="flow-step-editor" key={step.id}><span>{String(index + 1).padStart(2, '0')}</span><select value={step.type} onChange={e => updateStep(step.id, { type: e.target.value })}>{FLOW_TYPES.map(type => <option key={type}>{type}</option>)}</select><select value={step.scope} onChange={e => updateStep(step.id, { scope: e.target.value })}>{FLOW_SCOPES.map(scope => <option key={scope}>{scope}</option>)}</select><input value={step.text} onChange={e => updateStep(step.id, { text: e.target.value })} placeholder="Describe the condition or action" /><div><button type="button" disabled={index === 0} onClick={() => moveStep(step.id, -1)} aria-label="Move node up">↑</button><button type="button" disabled={index === visibleSteps.length - 1} onClick={() => moveStep(step.id, 1)} aria-label="Move node down">↓</button><button type="button" disabled={steps.length === 1} onClick={() => removeStep(step.id)} aria-label="Delete node"><Trash2 size={12} /></button></div></div>) : <div className="flow-filter-empty"><Target size={18} /><b>No {flowScope} nodes yet</b><span>Add a node to build this structure layer.</span></div>}</div></section><section className="flow-preview"><header><div><p>LIVE GRAPH</p><h3>{flowScope}</h3></div><span>{visibleSteps.length} node{visibleSteps.length === 1 ? '' : 's'}</span></header>{visibleSteps.length ? <PlaybookFlow steps={visibleSteps} /> : <div className="flow-filter-empty compact"><Target size={18} /><span>Nothing to display for this layer.</span></div>}</section></div>{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">{initialPlan ? 'Save strategy changes' : 'Save complete playbook'}</button></div></form></Modal>;
+}
+
+function PlanModal({ initialPlan, onClose, onSave }) {
+  const makeStep = (type = 'Confirmation', scope = 'STF') => ({ id: uid(), type, scope, text: '' });
+  const originalFlow = initialPlan?.flow || [];
+  const existingEvidence = initialPlan?.timeframeImages || {};
+  const initialEvidence = FLOW_SCOPES.reduce((result, scope) => {
+    result[scope] = Array.isArray(existingEvidence[scope])
+      ? existingEvidence[scope]
+      : Object.entries(existingEvidence)
+        .filter(([key, value]) => key.startsWith(`${scope}:`) && Array.isArray(value))
+        .flatMap(([, value]) => value);
+    return result;
+  }, {});
+  const [name, setName] = useState(initialPlan?.name || '');
+  const [market, setMarket] = useState(initialPlan?.market || '');
+  const [entryModel, setEntryModel] = useState(initialPlan?.entryModel || '');
+  const [entryCriteria, setEntryCriteria] = useState((initialPlan?.entryCriteria || []).join('\n'));
+  const [managementRules, setManagementRules] = useState((initialPlan?.managementRules || []).join('\n'));
+  const [exitCriteria, setExitCriteria] = useState((initialPlan?.exitCriteria || []).join('\n'));
+  const [timeframeImages, setTimeframeImages] = useState(initialEvidence);
+  const [steps, setSteps] = useState(() => originalFlow.length
+    ? originalFlow.map((step, index) => {
+      const { timeframe, ...savedStep } = step;
+      return { ...savedStep, scope: step.scope || (index === 0 ? 'HTF' : index === originalFlow.length - 1 ? 'STF' : 'MTF') };
+    })
+    : [makeStep('Context', 'HTF'), makeStep('Confirmation', 'MTF'), makeStep('Entry', 'STF')]);
+  const [error, setError] = useState('');
+
+  const updateStep = (id, changes) => {
+    setSteps(current => current.map(step => step.id === id ? { ...step, ...changes } : step));
+  };
+  const moveScopeStep = (scope, id, direction) => {
+    setSteps(current => {
+      const scopeIds = current.filter(step => step.scope === scope).map(step => step.id);
+      const scopeIndex = scopeIds.indexOf(id);
+      const targetId = scopeIds[scopeIndex + direction];
+      if (!targetId) return current;
+      const index = current.findIndex(step => step.id === id);
+      const target = current.findIndex(step => step.id === targetId);
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+  const removeStep = id => setSteps(current => current.length === 1 ? current : current.filter(step => step.id !== id));
+  const addStep = scope => setSteps(current => [...current, makeStep('Confirmation', scope)]);
+  const updateEvidence = (scope, nextImages) => {
+    setTimeframeImages(current => ({ ...current, [scope]: nextImages }));
+  };
+  const submit = event => {
+    event.preventDefault();
+    const flow = steps.map(step => ({ ...step, text: step.text.trim() })).filter(step => step.text);
+    const entries = listFromText(entryCriteria);
+    const management = listFromText(managementRules);
+    const exits = listFromText(exitCriteria);
+    if (!name.trim() || !entryModel.trim() || !entries.length || !flow.length) {
+      setError('Add a playbook name, entry model, entry criteria and at least one timeframe step.');
+      return;
+    }
+    onSave({
+      ...initialPlan,
+      id: initialPlan?.id || uid(),
+      name: name.trim(),
+      market: market.trim(),
+      entryModel: entryModel.trim(),
+      entryCriteria: entries,
+      managementRules: management,
+      exitCriteria: exits,
+      images: initialPlan?.images || [],
+      timeframeImages,
+      flow,
+      timeframes: undefined,
+      rules: flow.map(step => step.text),
+      active: initialPlan?.active || false,
+    });
+  };
+
+  return <Modal fullScreen onClose={onClose} eyebrow={initialPlan ? 'Edit trade playbook' : 'New trade playbook'} title={initialPlan ? `Refine ${initialPlan.name}` : 'Define the full execution model'}>
+    <form className="playbook-flow-form" onSubmit={submit}>
+      <div className="flow-meta">
+        <Field label="Playbook name"><input value={name} onChange={event => setName(event.target.value)} placeholder="e.g. London liquidity sweep" autoFocus /></Field>
+        <Field label="Market focus"><input value={market} onChange={event => setMarket(event.target.value)} placeholder="e.g. XAUUSD · London session" /></Field>
+      </div>
+      <section className="playbook-definition">
+        <header><div><p>PLAYBOOK DEFINITION</p><h3>Define the conditions around execution</h3></div></header>
+        <div className="plan-definition-grid">
+          <Field label="Entry model"><textarea value={entryModel} onChange={event => setEntryModel(event.target.value)} placeholder="Describe the market context, setup and trigger in plain language." /></Field>
+          <Field label="Entry criteria · one per line"><textarea value={entryCriteria} onChange={event => setEntryCriteria(event.target.value)} placeholder={'HTF bias aligned\nLiquidity sweep confirmed\n5m displacement closes'} /></Field>
+          <Field label="Trade management rules · one per line"><textarea value={managementRules} onChange={event => setManagementRules(event.target.value)} placeholder={'Partial 50% at 1R\nMove stop to break-even after 1R\nNo add-ons after first target'} /></Field>
+          <Field label="Exit criteria · one per line"><textarea value={exitCriteria} onChange={event => setExitCriteria(event.target.value)} placeholder={'Target opposing liquidity\nExit if structure invalidates\nClose before session end'} /></Field>
+        </div>
+      </section>
+      <section className="playbook-timeframe-section">
+        <header><div><p>TIMEFRAME EVIDENCE</p><h3>HTF, MTF and STF screenshots</h3></div><span>Each panel saves independently</span></header>
+        <div className="flow-evidence-row">
+          {FLOW_SCOPES.map(scope => <section className="flow-timeframe-evidence" key={scope}>
+            <div className="flow-evidence-heading"><span><b>{scope}</b><small>{(timeframeImages[scope] || []).length} screenshot{(timeframeImages[scope] || []).length === 1 ? '' : 's'}</small></span><Camera size={14} /></div>
+            <ImageUploader images={timeframeImages[scope] || []} onChange={nextImages => updateEvidence(scope, nextImages)} title={`${scope} chart`} help={`Upload the ${scope} structure view.`} />
+          </section>)}
+        </div>
+      </section>
+      <section className="playbook-timeframe-section">
+        <header><div><p>EXECUTION SEQUENCE</p><h3>Steps required at each timeframe</h3></div><span>Context → confirmation → entry</span></header>
+        <div className="flow-steps-row">
+          {FLOW_SCOPES.map(scope => {
+            const scopeSteps = steps.filter(step => step.scope === scope);
+            return <section className="flow-layer-steps" key={scope}>
+              <header><div><p>{scope} STEPS</p><h3>{scope} execution path</h3></div><button type="button" onClick={() => addStep(scope)}><Plus size={12} /> Add step</button></header>
+              <div className="flow-layer-step-list">
+                {scopeSteps.length ? scopeSteps.map((step, index) => <div className="flow-layer-step" key={step.id}>
+                  <span>{String(index + 1).padStart(2, '0')}</span>
+                  <select value={step.type} onChange={event => updateStep(step.id, { type: event.target.value })}>{FLOW_TYPES.map(type => <option key={type}>{type}</option>)}</select>
+                  <input value={step.text} onChange={event => updateStep(step.id, { text: event.target.value })} placeholder={`Add ${scope} condition or action`} />
+                  <div>
+                    <button type="button" disabled={index === 0} onClick={() => moveScopeStep(scope, step.id, -1)} aria-label={`Move ${scope} step up`}>↑</button>
+                    <button type="button" disabled={index === scopeSteps.length - 1} onClick={() => moveScopeStep(scope, step.id, 1)} aria-label={`Move ${scope} step down`}>↓</button>
+                    <button type="button" disabled={steps.length === 1} onClick={() => removeStep(step.id)} aria-label={`Delete ${scope} step`}><Trash2 size={12} /></button>
+                  </div>
+                </div>) : <div className="flow-filter-empty layer-empty"><Target size={16} /><b>No {scope} steps</b><span>Add the first condition for this layer.</span></div>}
+              </div>
+            </section>;
+          })}
+        </div>
+      </section>
+      {error && <div className="form-error">{error}</div>}
+      <div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button">{initialPlan ? 'Save strategy changes' : 'Save complete playbook'}</button></div>
+    </form>
+  </Modal>;
 }
 
 function AccountModal({ onClose, onSave, required = false }) {
@@ -639,12 +821,12 @@ function ReviewModal({ trade, onClose, onSave }) {
     if (!form.setup.trim() || form.pnl === '') return setError('Setup and net P&L are required.');
     const pnl = Number(form.pnl), fees = Number(form.fees || 0), date = new Date(form.date);
     if (!Number.isFinite(pnl) || !Number.isFinite(fees) || !Number.isFinite(date.getTime())) return setError('Check the P&L, fees and trade time.');
-    onSave({ ...form, pnl, fees, entry: form.entry === '' ? null : Number(form.entry), exit: form.exit === '' ? null : Number(form.exit), date: date.toISOString() });
+    onSave({ ...form, pnl, fees, entry: form.entry === '' ? null : Number(form.entry), exit: form.exit === '' ? null : Number(form.exit), date: date.toISOString(), timeZone: USER_TIME_ZONE });
   };
   const entryLabel = form.entry !== '' && Number.isFinite(Number(form.entry)) ? formatQuote(Number(form.entry)) : 'Not recorded';
   const exitLabel = form.exit !== '' && Number.isFinite(Number(form.exit)) ? formatQuote(Number(form.exit)) : 'Not recorded';
   const setupLabel = form.setup.trim() || 'Not specified';
-  return <Modal onClose={onClose} eyebrow={`${INSTRUMENTS[form.symbol]?.label || form.symbol} · Edit saved trade`} title={`Setup: ${setupLabel}`}><form className="journal-entry-form" onSubmit={submit}><div className="review-metrics"><div><span>Net result</span><b className={Number(form.pnl) >= 0 ? 'positive' : 'negative'}>{money(Number(form.pnl) || 0)}</b></div><div><span>Direction</span><b>{form.side === 'buy' ? 'Long' : 'Short'}</b></div><div><span>Entry → Exit</span><b>{entryLabel} → {exitLabel}</b></div><div><span>Playbook</span><b>{form.plan ? 'Followed' : 'Off-plan'}</b></div></div><section className="journal-form-section"><header><span>01</span><div><small>TRADE DETAILS</small><b>Edit execution facts</b></div></header><div className="modal-grid"><Field label="Instrument"><select value={form.symbol} onChange={event => field('symbol', event.target.value)}><option value="XAUUSD">XAU / USD</option><option value="BTCUSD">BTC / USD</option><option value="EURUSD">EUR / USD</option><option value="NAS100">NAS100</option></select></Field><Field label="Direction"><select value={form.side} onChange={event => field('side', event.target.value)}><option value="buy">Long / Buy</option><option value="sell">Short / Sell</option></select></Field><Field label="Setup name"><input value={form.setup} onChange={event => field('setup', event.target.value)} placeholder="Your setup or playbook" /></Field><Field label="Trade time"><input type="datetime-local" value={form.date} onChange={event => field('date', event.target.value)} /></Field><Field label="Entry price"><input type="number" step="any" value={form.entry} onChange={event => field('entry', event.target.value)} placeholder="Optional" /></Field><Field label="Exit price"><input type="number" step="any" value={form.exit} onChange={event => field('exit', event.target.value)} placeholder="Optional" /></Field><Field label="Net P&L"><NumberField value={form.pnl} onChange={value => field('pnl', value)} prefix="$" /></Field><Field label="Fees"><NumberField value={form.fees} onChange={value => field('fees', value)} prefix="$" /></Field></div></section><section className="journal-form-section"><header><span>02</span><div><small>PROCESS REVIEW</small><b>Edit management and psychology</b></div></header><div className="modal-grid"><Field label="Entry emotion"><select value={form.emotion} onChange={event => field('emotion', event.target.value)}><option>Focused</option><option>Confident</option><option>Anxious</option><option>FOMO</option><option>Frustrated</option></select></Field><Field label="Exit emotion"><select value={form.exitEmotion} onChange={event => field('exitEmotion', event.target.value)}><option>Focused</option><option>Confident</option><option>Relieved</option><option>Disappointed</option><option>Frustrated</option></select></Field><Field label="Trade management"><input value={form.management} onChange={event => field('management', event.target.value)} placeholder="Partials, stop movement, scaling…" /></Field><Field label="Mistakes / rule breaks"><input value={form.mistakes} onChange={event => field('mistakes', event.target.value)} placeholder="What deviated from the plan?" /></Field><Field label="Execution grade"><select value={form.grade} onChange={event => field('grade', event.target.value)}><option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option><option>F</option></select></Field></div><label className="check-control"><input type="checkbox" checked={form.plan} onChange={event => field('plan', event.target.checked)} /><span><Check size={13} /></span>I followed my active playbook</label><Field label="Reflection and lesson"><textarea value={form.note} onChange={event => field('note', event.target.value)} placeholder="What worked? What failed? What will you repeat next time?" /></Field></section><ImageUploader images={form.images} onChange={images => field('images', images)} title="Trade charts" help="Attach multiple MTF, HTF, LTF, entry and exit screenshots." />{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button"><Pencil size={14} /> Save trade changes</button></div></form></Modal>;
+  return <Modal onClose={onClose} eyebrow={`${INSTRUMENTS[form.symbol]?.label || form.symbol} · Edit saved trade`} title={`Setup: ${setupLabel}`}><form className="journal-entry-form" onSubmit={submit}><div className="review-metrics"><div><span>Net result</span><b className={Number(form.pnl) >= 0 ? 'positive' : 'negative'}>{money(Number(form.pnl) || 0)}</b></div><div><span>Direction</span><b>{form.side === 'buy' ? 'Long' : 'Short'}</b></div><div><span>Entry → Exit</span><b>{entryLabel} → {exitLabel}</b></div><div><span>Playbook</span><b>{form.plan ? 'Followed' : 'Off-plan'}</b></div></div><section className="journal-form-section"><header><span>01</span><div><small>TRADE DETAILS</small><b>Edit execution facts</b></div></header><div className="modal-grid"><Field label="Instrument"><select value={form.symbol} onChange={event => field('symbol', event.target.value)}><option value="XAUUSD">XAU / USD</option><option value="BTCUSD">BTC / USD</option><option value="EURUSD">EUR / USD</option><option value="NAS100">NAS100</option></select></Field><Field label="Direction"><select value={form.side} onChange={event => field('side', event.target.value)}><option value="buy">Long / Buy</option><option value="sell">Short / Sell</option></select></Field><Field label="Setup name"><input value={form.setup} onChange={event => field('setup', event.target.value)} placeholder="Your setup or playbook" /></Field><Field label={`Trade time · ${USER_TIME_ZONE_LABEL}`}><input type="datetime-local" value={form.date} onChange={event => field('date', event.target.value)} /></Field><Field label="Entry price"><input type="number" step="any" value={form.entry} onChange={event => field('entry', event.target.value)} placeholder="Optional" /></Field><Field label="Exit price"><input type="number" step="any" value={form.exit} onChange={event => field('exit', event.target.value)} placeholder="Optional" /></Field><Field label="Net P&L"><NumberField value={form.pnl} onChange={value => field('pnl', value)} prefix="$" /></Field><Field label="Fees"><NumberField value={form.fees} onChange={value => field('fees', value)} prefix="$" /></Field></div></section><section className="journal-form-section"><header><span>02</span><div><small>PROCESS REVIEW</small><b>Edit management and psychology</b></div></header><div className="modal-grid"><Field label="Entry emotion"><select value={form.emotion} onChange={event => field('emotion', event.target.value)}><option>Focused</option><option>Confident</option><option>Anxious</option><option>FOMO</option><option>Frustrated</option></select></Field><Field label="Exit emotion"><select value={form.exitEmotion} onChange={event => field('exitEmotion', event.target.value)}><option>Focused</option><option>Confident</option><option>Relieved</option><option>Disappointed</option><option>Frustrated</option></select></Field><Field label="Trade management"><input value={form.management} onChange={event => field('management', event.target.value)} placeholder="Partials, stop movement, scaling…" /></Field><Field label="Mistakes / rule breaks"><input value={form.mistakes} onChange={event => field('mistakes', event.target.value)} placeholder="What deviated from the plan?" /></Field><Field label="Execution grade"><select value={form.grade} onChange={event => field('grade', event.target.value)}><option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option><option>F</option></select></Field></div><label className="check-control"><input type="checkbox" checked={form.plan} onChange={event => field('plan', event.target.checked)} /><span><Check size={13} /></span>I followed my active playbook</label><Field label="Reflection and lesson"><textarea value={form.note} onChange={event => field('note', event.target.value)} placeholder="What worked? What failed? What will you repeat next time?" /></Field></section><ImageUploader images={form.images} onChange={images => field('images', images)} title="Trade charts" help="Attach multiple MTF, HTF, LTF, entry and exit screenshots." />{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button"><Pencil size={14} /> Save trade changes</button></div></form></Modal>;
 }
 
 function ElefinCheckIn({ accountId, onClose, onStart }) {
@@ -757,7 +939,7 @@ function ImageUploader({ images = [], onChange, title, help }) {
   return <section className="image-uploader"><header><div><small>VISUAL EVIDENCE</small><h3>{title}</h3><p>{help}</p></div><label className={busy || images.length >= MAX_IMAGES ? 'disabled' : ''}><Camera size={14} />{busy ? 'Processing…' : 'Add screenshots'}<input type="file" accept="image/*" multiple onChange={addImages} disabled={busy || images.length >= MAX_IMAGES} /></label></header>{images.length ? <div className="image-preview-grid">{images.map((image, index) => <figure key={image.id || index}><img src={image.url} alt={`${title} ${index + 1}`} /><figcaption><span>{image.name || `Screenshot ${index + 1}`}</span><button type="button" onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove ${image.name || `screenshot ${index + 1}`}`}><X size={12} /></button></figcaption></figure>)}</div> : <div className="image-drop-empty"><Camera size={18} /><span>No screenshots yet · JPG, PNG or WebP</span></div>}{error && <div className="form-error">{error}</div>}<footer>{images.length}/{MAX_IMAGES} images · compressed before D1 sync</footer></section>;
 }
 
-function Modal({ children, onClose, eyebrow, title, dismissible = true }) { return <div className="modal-backdrop" onMouseDown={e => dismissible && e.target === e.currentTarget && onClose()}><section className="modal-panel" role="dialog" aria-modal="true"><div className="modal-heading"><div><p>{eyebrow}</p><h2>{title}</h2></div>{dismissible && <button onClick={onClose}><X size={18} /></button>}</div>{children}</section></div>; }
+function Modal({ children, onClose, eyebrow, title, dismissible = true, drawer = false, fullScreen = false }) { return <div className={`modal-backdrop ${drawer ? 'modal-drawer-backdrop' : ''} ${fullScreen ? 'modal-fullscreen-backdrop' : ''}`} onMouseDown={e => dismissible && e.target === e.currentTarget && onClose()}><section className={`modal-panel ${drawer ? 'modal-drawer' : ''} ${fullScreen ? 'modal-fullscreen' : ''}`} role="dialog" aria-modal="true"><div className="modal-heading"><div><p>{eyebrow}</p><h2>{title}</h2></div>{dismissible && <button onClick={onClose}><X size={18} /></button>}</div>{children}</section></div>; }
 function Field({ label, children }) { return <label className="field-label"><span>{label}</span>{children}</label>; }
 function NumberField({ value, onChange, suffix, prefix }) { return <div className="number-field">{prefix && <span>{prefix}</span>}<input type="number" step="any" value={value} onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))} />{suffix && <small>{suffix}</small>}</div>; }
 function Instrument({ symbol }) { const item = INSTRUMENTS[symbol] || { label: symbol, accent: 'violet' }; return <span className="instrument"><InstrumentMark symbol={symbol} size={26} /><b>{item.label}</b></span>; }
