@@ -6,7 +6,7 @@ import {
   LineChart, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, Target, Trash2,
   TrendingUp, WalletCards, X, ZoomIn, Moon, Sun, ExternalLink, RefreshCw, Clock3,
   Newspaper, Radio, ZoomOut, RotateCcw, ChevronLeft, ChevronRight, Camera,
-  Maximize2, Pencil, Cloud, CloudOff, LoaderCircle, Database,
+  Maximize2, Minimize2, Pencil, Cloud, CloudOff, LoaderCircle, Database,
   BadgeCheck, LogOut, UserRound,
 } from 'lucide-react';
 import { useLocalState } from './hooks/useLocalState';
@@ -14,7 +14,7 @@ import { useAccountWorkspace } from './hooks/useAccountWorkspace';
 import { useEconomicCalendar } from './hooks/useEconomicCalendar';
 
 const INITIAL = {
-  settings: { startingBalance: 10000, maxDailyLoss: 500, maxTrades: 4, riskPerTrade: 100 },
+  settings: { startingBalance: 0, maxDailyLoss: 0, maxTrades: 0, riskPerTrade: 0 },
   trades: [], positions: [], plans: [], sessions: [],
   routine: { checks: [false, false, false, false, false], bias: '', notes: '', complete: false, completedAt: null },
   pendingSession: null,
@@ -27,13 +27,13 @@ const NAV = [
   ['dashboard', LayoutDashboard, 'Overview'], ['journal', BookOpen, 'Journal'],
   ['analytics', BarChart3, 'Analytics'],
   ['plans', Target, 'Playbooks'],
-  ['settings', Settings, 'Settings'],
+  ['settings', Settings, 'Risk control'],
 ];
 const TITLES = {
   dashboard: ['Overview', ''],
   journal: ['Trading journal', ''], analytics: ['Performance analytics', ''],
   premarket: ['Pre-market routine', ''], plans: ['Strategy playbooks', ''],
-  settings: ['Risk controls', ''],
+  settings: ['Risk control', ''],
 };
 const CHECKS = ['Review scheduled market events', 'Mark higher-timeframe levels', 'Set session risk limits', 'Confirm active strategy', 'Check mental state and intention'];
 const ELEFIN_CHECKS = [
@@ -245,7 +245,7 @@ export default function App() {
         {page === 'journal' && <Journal trades={data.trades} sessions={sessions} onAdd={openTrade} onReview={setReviewTrade} onAddNote={setNoteTrade} onDelete={id => patch(next => next.trades = next.trades.filter(t => t.id !== id))} />}
         {page === 'analytics' && <Analytics trades={data.trades} sessions={sessions} theme={theme} />}
         {page === 'premarket' && <Premarket routine={data.routine} activePlan={activePlan} patch={patch} go={go} />}
-        {page === 'plans' && <Plans plans={data.plans} patch={patch} onAdd={() => setPlanModal('new')} onEdit={setPlanModal} />}
+        {page === 'plans' && <Plans plans={data.plans} trades={data.trades} patch={patch} onAdd={() => setPlanModal('new')} onEdit={setPlanModal} />}
         {page === 'settings' && <RiskSettings settings={data.settings} patch={patch} account={activeAccount} identity={identity} syncStatus={syncStatus} />}
       </div>
     </main>
@@ -350,7 +350,7 @@ function Dashboard({ data, totalPnl, todayPnl, todayTrades, activePlan, go, them
     ['Today', money(todayPnl), CircleDollarSign, todayPnl >= 0 ? 'green' : 'red', `${todayTrades.length} trades this session`],
   ];
   return <div className="page-stack">
-    <section className="command-banner"><div><div className="live-badge"><span /> Session controls active</div><h2>Trade the process. <em>Let results follow.</em></h2><p>Preparation, execution and review—one disciplined loop.</p></div><div className="command-side"><div><span>ACTIVE PLAYBOOK</span><b>{activePlan?.name || 'None selected'}</b><small>{activePlan ? activePlan.market : 'Select a process before your next session'}</small></div><button onClick={() => go(activePlan ? 'premarket' : 'plans')}>{activePlan ? 'Open routine' : 'Choose playbook'} <ArrowUpRight size={14} /></button></div></section>
+    <section className="command-banner playbook-banner"><div className="command-side"><div><span>SELECTED PLAYBOOK</span><b>{activePlan?.name || 'None selected'}</b>{activePlan?.market && <small>{activePlan.market}</small>}</div><button onClick={() => go('plans')}>{activePlan ? 'View playbook' : 'Choose playbook'} <ArrowUpRight size={14} /></button></div></section>
     <div className="stats-grid">{cards.map(([label, value, Icon, tone, help]) => <article className="stat-card" key={label}><div><span>{label}</span><i className={tone}><Icon size={17} /></i></div><strong className={label.includes('P&L') || label === 'Today' ? (value.includes('−') ? 'negative' : 'positive') : ''}>{value}</strong><small>{help}</small></article>)}</div>
     <div className="dashboard-grid"><GuardrailPanel data={data} todayTrades={todayTrades} todayPnl={todayPnl} go={go} onCheckIn={onCheckIn} /><EquityPanel trades={data.trades} start={data.settings.startingBalance} theme={theme} /></div>
     <RecentTrades trades={data.trades.slice(0, 5)} go={go} onEdit={onEditTrade} onAddNote={onAddNote} />
@@ -363,8 +363,8 @@ function EquityPanel({ trades, start, theme }) {
   const firstTradeTime = sorted.length ? new Date(sorted[0].date).getTime() : Date.now();
   const points = [[firstTradeTime - 3600000, start], ...sorted.map(trade => [new Date(trade.date).getTime(), running += Number(trade.pnl) || 0])];
   const chartLine = theme === 'dark' ? '#292d38' : '#f0f1f5';
-  const option = { animation: false, grid: { left: 8, right: 8, top: 18, bottom: 8, containLabel: true }, tooltip: { trigger: 'axis', triggerOn: 'mousemove', alwaysShowContent: false, hideDelay: 80, enterable: false, confine: true, valueFormatter: v => plainMoney(v) }, xAxis: { type: 'time', axisLabel: { color: '#84909c', fontSize: 12 }, axisLine: { lineStyle: { color: chartLine } }, splitLine: { show: false } }, yAxis: { type: 'value', scale: true, position: 'right', axisLabel: { color: '#84909c', fontSize: 12, formatter: v => Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${Number(v).toFixed(0)}` }, splitLine: { lineStyle: { color: chartLine } } }, series: [{ type: 'line', data: trades.length ? points : [], showSymbol: false, smooth: .28, lineStyle: { color: '#6e8eaa', width: 2 }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#6e8eaa34' }, { offset: 1, color: '#6e8eaa00' }] } } }] };
-  return <section className="surface equity-surface"><SectionTitle eyebrow="ACCOUNT GROWTH" title="Equity curve" action="All time" />{trades.length ? <ReactECharts option={option} style={{ height: 180 }} /> : <EmptyState icon={TrendingUp} title="Your equity curve starts here" text="Log your first completed trade to begin tracking account growth." />}</section>;
+  const option = { animation: false, grid: { left: 8, right: 8, top: 18, bottom: 8, containLabel: true }, tooltip: { trigger: 'axis', triggerOn: 'mousemove', alwaysShowContent: false, hideDelay: 80, enterable: false, confine: true, valueFormatter: v => plainMoney(v) }, xAxis: { type: 'time', axisLabel: { color: '#84909c', fontSize: 12 }, axisLine: { lineStyle: { color: chartLine } }, splitLine: { show: false } }, yAxis: { type: 'value', scale: true, position: 'right', axisLabel: { color: '#84909c', fontSize: 12, formatter: v => Math.abs(v) >= 100000 ? `$${(v / 1000).toFixed(1)}k` : `$${Number(v).toLocaleString('en-US', { maximumFractionDigits: 0 })}` }, splitLine: { lineStyle: { color: chartLine } } }, series: [{ type: 'line', data: trades.length ? points : [], showSymbol: true, symbolSize: 5, smooth: .28, lineStyle: { color: '#4d83b3', width: 2.4 }, itemStyle: { color: '#276eb0', borderColor: '#fff', borderWidth: 1.5 }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#4d83b333' }, { offset: 1, color: '#4d83b300' }] } } }] };
+  return <section className="surface equity-surface"><SectionTitle eyebrow="ACCOUNT GROWTH" title="Equity curve" action="All time" />{trades.length ? <ReactECharts option={option} style={{ height: 220 }} /> : <EmptyState icon={TrendingUp} title="Your equity curve starts here" text="Log your first completed trade to begin tracking account growth." />}</section>;
 }
 
 function GuardrailPanel({ data, todayTrades, todayPnl, go, onCheckIn }) {
@@ -436,8 +436,12 @@ function Journal({ trades, sessions, onAdd, onReview, onAddNote, onDelete }) {
   const [month, setMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const filtered = trades.filter(t => `${t.symbol} ${t.setup} ${t.emotion}`.toLowerCase().includes(query.toLowerCase()));
+  const now = new Date();
+  const monthTrades = trades.filter(trade => { const date = new Date(trade.date); return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth(); });
+  const monthPnl = monthTrades.reduce((sum, trade) => sum + Number(trade.pnl || 0), 0);
+  const monthState = monthPnl > 0 ? 'Profit' : monthPnl < 0 ? 'Loss' : 'Flat';
   const addFromDay = date => { setSelectedDate(null); onAdd(date); };
-  return <div className="page-stack journal-workspace"><div className="journal-grid"><JournalCalendar trades={trades} sessions={sessions} month={month} setMonth={setMonth} onSelect={setSelectedDate} /><JournalInsight trades={trades} /></div><section className="surface journal-list"><div className="section-toolbar"><SectionTitle eyebrow="Trade archive" title={`${trades.length} journal entries`} /><div className="search-box"><Search size={15} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search setup, market or emotion" /></div></div>{filtered.length ? <div className="table-scroll"><table><thead><tr><th>Instrument</th><th>Date</th><th>Setup</th><th>Side</th><th>Lots</th><th>Grade</th><th>Evidence</th><th>Net result</th><th>Actions</th></tr></thead><tbody>{filtered.map(t => { const reviewed = Boolean(t.note || t.management || t.mistakes || t.images?.length); return <tr key={t.id}><td><Instrument symbol={t.symbol} /></td><td>{new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}</td><td><div className="setup-cell"><b>{t.setup || '—'}</b><small>{t.management || t.note || 'Review not added'}</small></div></td><td className={t.side === 'buy' ? 'positive' : 'negative'}>{t.side === 'buy' ? 'Long' : 'Short'}</td><td>{t.lotSize == null || t.lotSize === '' || !Number.isFinite(Number(t.lotSize)) ? '—' : Number(t.lotSize).toLocaleString()}</td><td><span className="grade">{t.grade || '—'}</span></td><td>{t.images?.length ? <span className="evidence-count"><Camera size={12} /> {t.images.length}</span> : <span className="no-evidence">—</span>}</td><td className={t.pnl >= 0 ? 'positive' : 'negative'}><b>{money(t.pnl)}</b></td><td className="row-actions"><button className="review-action" onClick={() => onReview(t)}><ClipboardCheck size={12} /> {reviewed ? 'Edit review' : 'Add review'}</button><button className="edit-trade-action" onClick={() => onReview(t)} title="Edit saved trade" aria-label="Edit saved trade"><Pencil size={13} /></button><button className="note-trade-action" onClick={() => onAddNote(t)} title="Append note" aria-label="Append note"><Plus size={13} /></button><button className="icon-danger" onClick={() => onDelete(t.id)} title="Delete trade" aria-label="Delete trade"><Trash2 size={14} /></button></td></tr>; })}</tbody></table></div> : <EmptyState icon={BookOpen} title="No matching journal entries" text={trades.length ? 'Change your search to see more trades.' : 'Your journal is empty. Click a calendar date to add your first real trade.'} />}</section>{selectedDate && <JournalDayPanel date={selectedDate} trades={trades} sessions={sessions} onClose={() => setSelectedDate(null)} onAdd={addFromDay} onReview={onReview} onAddNote={onAddNote} onDelete={onDelete} />}</div>;
+  return <div className="page-stack journal-workspace"><section className={`command-banner playbook-banner journal-month-banner ${monthState.toLowerCase()}`}><div className="command-side"><div><span>THIS MONTH · {now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}</span><b>{money(monthPnl)}</b><small>{monthTrades.length} completed trade{monthTrades.length === 1 ? '' : 's'}</small></div><em className="month-state">{monthState}</em></div></section><div className="journal-grid"><JournalCalendar trades={trades} sessions={sessions} month={month} setMonth={setMonth} onSelect={setSelectedDate} /><JournalInsight trades={trades} /></div><section className="surface journal-list"><div className="section-toolbar"><SectionTitle eyebrow="Trade archive" title={`${trades.length} journal entries`} /><div className="search-box"><Search size={15} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search setup, market or emotion" /></div></div>{filtered.length ? <div className="table-scroll"><table><thead><tr><th>Instrument</th><th>Date</th><th>Setup</th><th>Side</th><th>Lots</th><th>Grade</th><th>Evidence</th><th>Net result</th><th>Actions</th></tr></thead><tbody>{filtered.map(t => { const reviewed = Boolean(t.note || t.management || t.mistakes || t.images?.length); return <tr key={t.id}><td><Instrument symbol={t.symbol} /></td><td>{new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}</td><td><div className="setup-cell"><b>{t.setup || '—'}</b><small>{t.management || t.note || 'Review not added'}</small></div></td><td className={t.side === 'buy' ? 'positive' : 'negative'}>{t.side === 'buy' ? 'Long' : 'Short'}</td><td>{t.lotSize == null || t.lotSize === '' || !Number.isFinite(Number(t.lotSize)) ? '—' : Number(t.lotSize).toLocaleString()}</td><td><span className="grade">{t.grade || '—'}</span></td><td>{t.images?.length ? <span className="evidence-count"><Camera size={12} /> {t.images.length}</span> : <span className="no-evidence">—</span>}</td><td className={t.pnl >= 0 ? 'positive' : 'negative'}><b>{money(t.pnl)}</b></td><td className="row-actions"><button className="review-action" onClick={() => onReview(t)}><ClipboardCheck size={12} /> {reviewed ? 'Edit review' : 'Add review'}</button><button className="edit-trade-action" onClick={() => onReview(t)} title="Edit saved trade" aria-label="Edit saved trade"><Pencil size={13} /></button><button className="note-trade-action" onClick={() => onAddNote(t)} title="Append note" aria-label="Append note"><Plus size={13} /></button><button className="icon-danger" onClick={() => onDelete(t.id)} title="Delete trade" aria-label="Delete trade"><Trash2 size={14} /></button></td></tr>; })}</tbody></table></div> : <EmptyState icon={BookOpen} title="No matching journal entries" text={trades.length ? 'Change your search to see more trades.' : 'Your journal is empty. Click a calendar date to add your first real trade.'} />}</section>{selectedDate && <JournalDayPanel date={selectedDate} trades={trades} sessions={sessions} onClose={() => setSelectedDate(null)} onAdd={addFromDay} onReview={onReview} onAddNote={onAddNote} onDelete={onDelete} />}</div>;
 }
 
 function JournalCalendar({ trades, sessions, month, setMonth, onSelect }) {
@@ -634,11 +638,13 @@ function Premarket({ routine, activePlan, patch, go }) {
   return <div className="premarket-layout"><section className="surface routine-card"><div className="routine-header"><div><p>SESSION CHECKLIST</p><h2>Preparation creates permission.</h2><span>Execution unlocks when your process is complete.</span></div><div className={`progress-ring ${routine.complete ? 'done' : ''}`}><b>{routine.checks.filter(Boolean).length}</b><small>/ 5</small></div></div><div className="check-list">{CHECKS.map((label, index) => <button key={label} className={routine.checks[index] ? 'checked' : ''} onClick={() => toggle(index)}><i>{routine.checks[index] && <Check size={15} />}</i><span>{label}</span><em>{routine.checks[index] ? 'Complete' : 'Mark done'}</em></button>)}</div><div className="routine-fields"><Field label="Session bias"><select value={routine.bias} onChange={e => update({ bias: e.target.value })}><option value="">Select a directional bias</option><option>Bullish</option><option>Bearish</option><option>Neutral / wait</option></select></Field><Field label="Key levels and market context"><textarea value={routine.notes} onChange={e => update({ notes: e.target.value })} placeholder="Important levels, scheduled events, invalidation conditions…" /></Field></div><button className="primary-button complete-button" disabled={!ready} onClick={complete}>{routine.complete ? <><Check size={16} /> Routine completed</> : <>Complete pre-market <ArrowUpRight size={16} /></>}</button></section><aside className="premarket-aside"><section className="surface active-plan-card"><p>ACTIVE PLAYBOOK</p>{activePlan ? <><div className="plan-symbol"><Target size={20} /></div><h2>{activePlan.name}</h2><span>{activePlan.market || 'All connected markets'}</span><ul>{activePlan.rules.slice(0, 4).map(rule => <li key={rule}><Check size={13} />{rule}</li>)}</ul></> : <><div className="plan-symbol muted"><Target size={20} /></div><h2>No active playbook</h2><span>Create and select a strategy to complete preparation.</span><button onClick={() => go('plans')}>Create playbook <ArrowUpRight size={14} /></button></>}</section><section className={`session-state ${routine.complete ? 'ready' : ''}`}><ShieldCheck size={20} /><div><b>{routine.complete ? 'Session unlocked' : 'Execution locked'}</b><span>{routine.complete ? 'Your preparation is saved.' : 'Finish the checklist to enable orders.'}</span></div></section></aside></div>;
 }
 
-function Plans({ plans, patch, onAdd, onEdit }) {
-  return <div className="page-stack"><div className="page-intro"><div><p>STRATEGY LIBRARY</p><h2>Build the decision path behind your edge.</h2><span>Create a visible trading flow from context to review.</span></div><button className="primary-button" onClick={onAdd}><Plus size={16} /> New flow</button></div>{plans.length ? <div className="plan-grid">{plans.map(plan => {
+function Plans({ plans, trades = [], patch, onAdd, onEdit }) {
+  const strategyUsage = plans.map(plan => ({ plan, count: trades.filter(trade => trade.playbookId === plan.id || trade.playbookName === plan.name || trade.setup === plan.name).length })).sort((a, b) => b.count - a.count);
+  const mostUsed = strategyUsage[0]?.count ? strategyUsage[0] : null;
+  return <div className="page-stack"><div className="plans-summary-row"><section className="command-banner playbook-banner strategy-usage-banner"><div className="command-side"><div><span>MOST USED STRATEGY</span><b>{mostUsed?.plan.name || 'No strategy data yet'}</b><small>{mostUsed ? mostUsed.plan.market || 'All connected markets' : 'Use a saved playbook on a journal trade to rank it'}</small></div><em className="strategy-use-count">{mostUsed?.count || 0}<small> trades</small></em></div></section><button className="primary-button plans-new-flow" onClick={onAdd}><Plus size={16} /> New flow</button></div>{plans.length ? <div className="plan-grid">{plans.map(plan => {
     const flow = plan.flow?.length ? plan.flow : (plan.rules || []).map((text, index) => ({ id: `${plan.id}-${index}`, type: index === 0 ? 'Trigger' : index === (plan.rules || []).length - 1 ? 'Entry' : 'Confirmation', text }));
     return <article className={`surface plan-card ${plan.active ? 'active' : ''}`} key={plan.id}><div className="plan-top"><span>{plan.active ? '● ACTIVE PLAYBOOK' : 'TRADE PLAYBOOK'}</span><Target size={18} /></div><h2>{plan.name}</h2><p>{plan.market || 'All connected markets'}</p>{plan.images?.length ? <div className="plan-image-strip">{plan.images.slice(0, 3).map((image, index) => <figure key={image.id || index}><img src={image.url} alt={`${plan.name} example ${index + 1}`} />{index === 2 && plan.images.length > 3 && <span>+{plan.images.length - 3}</span>}</figure>)}</div> : null}{plan.entryModel && <div className="plan-thesis"><small>ENTRY MODEL</small><b>{plan.entryModel}</b></div>}<div className="plan-rule-counts"><span><b>{plan.entryCriteria?.length || 0}</b> entry criteria</span><span><b>{plan.managementRules?.length || 0}</b> management rules</span><span><b>{plan.exitCriteria?.length || 0}</b> exits</span></div><PlaybookFlow steps={flow} compact /><footer><button onClick={() => patch(next => next.plans.forEach(p => p.active = p.id === plan.id))}>{plan.active ? 'Currently active' : 'Set active'}</button><button className="plan-edit-button" onClick={() => onEdit(plan)}><Pencil size={13} /> Edit</button><button className="icon-danger" onClick={() => patch(next => next.plans = next.plans.filter(p => p.id !== plan.id))}><Trash2 size={14} /></button></footer></article>;
-  })}</div> : <EmptyState large icon={Target} title="Build your first trading flow" text="Map each real decision from context and trigger through execution and review." action="Create flow" onAction={onAdd} />}</div>;
+  })}</div> : <EmptyState large icon={Target} title="Build your first trading flow" text="Use the New flow button above to map context, confirmation, execution and review." />}</div>;
 }
 
 function PlaybookFlow({ steps, compact = false }) {
@@ -647,7 +653,25 @@ function PlaybookFlow({ steps, compact = false }) {
 
 function RiskSettings({ settings, patch, account, identity, syncStatus }) {
   const [form, setForm] = useState(settings), save = e => { e.preventDefault(); patch(next => next.settings = { ...form }); };
-  return <div className="settings-layout"><section className="surface settings-copy"><div className="settings-icon"><ShieldCheck size={22} /></div><p>RISK GOVERNANCE · {account.name}</p><h2>Rules that protect you before the click.</h2><span>These controls apply only to {account.name}. Switching accounts loads that account's own limits, journal and analytics.</span><div className="settings-note"><Sparkles size={16} /><div><b>Discipline by design</b><small>Guardrails are most useful when decided before the session.</small></div></div></section><form className="surface settings-form" onSubmit={save}><SectionTitle eyebrow="ACCOUNT LIMITS" title={`${account.name} controls`} /><div className="settings-grid"><Field label="Starting account balance"><NumberField value={form.startingBalance} onChange={value => setForm({ ...form, startingBalance: value })} prefix="$" /></Field><Field label="Maximum daily loss"><NumberField value={form.maxDailyLoss} onChange={value => setForm({ ...form, maxDailyLoss: value })} prefix="$" /></Field><Field label="Maximum trades per day"><NumberField value={form.maxTrades} onChange={value => setForm({ ...form, maxTrades: value })} /></Field><Field label="Default risk per trade"><NumberField value={form.riskPerTrade} onChange={value => setForm({ ...form, riskPerTrade: value })} prefix="$" /></Field></div><button className="primary-button save-settings">Save controls</button></form><section className="surface access-settings"><div><span><Database size={17} /></span><div><p>CLOUDFLARE D1</p><h3>{syncStatus === 'saving' ? 'Saving cloud workspace…' : 'Cloud workspace connected'}</h3><small>{identity?.email || 'Cloudflare Access user'} · Every account, journal entry, plan and session is isolated to this identity.</small></div></div></section></div>;
+  return <div className="settings-layout risk-control-layout">
+    <form className="surface settings-form risk-control-form" onSubmit={save}>
+      <SectionTitle eyebrow="ACCOUNT LIMITS" title={`${account.name} controls`} />
+      <div className="settings-grid">
+        <Field label="Starting account balance"><NumberField value={form.startingBalance} onChange={value => setForm({ ...form, startingBalance: value })} prefix="$" /></Field>
+        <Field label="Maximum daily loss"><NumberField value={form.maxDailyLoss} onChange={value => setForm({ ...form, maxDailyLoss: value })} prefix="$" /></Field>
+        <Field label="Maximum trades per day"><NumberField value={form.maxTrades} onChange={value => setForm({ ...form, maxTrades: value })} /></Field>
+        <Field label="Default risk per trade"><NumberField value={form.riskPerTrade} onChange={value => setForm({ ...form, riskPerTrade: value })} prefix="$" /></Field>
+      </div>
+      <button className="primary-button save-settings">Save controls</button>
+    </form>
+    <aside className="risk-control-aside">
+      <section className="risk-control-preview">
+        <header><span><ShieldCheck size={18} /></span><div><small>LIVE LIMITS</small><h2>{account.name}</h2></div></header>
+        <div className="risk-preview-list"><div><span>Starting balance</span><b>{plainMoney(Number(form.startingBalance) || 0)}</b></div><div><span>Daily loss ceiling</span><b>{plainMoney(Number(form.maxDailyLoss) || 0)}</b></div><div><span>Trades per day</span><b>{Number(form.maxTrades) || 0}</b></div><div><span>Risk per trade</span><b>{plainMoney(Number(form.riskPerTrade) || 0)}</b></div></div>
+      </section>
+      <section className="surface access-settings"><div><span><Database size={17} /></span><div><p>CLOUDFLARE D1</p><h3>{syncStatus === 'saving' ? 'Saving cloud workspace…' : 'Cloud workspace connected'}</h3><small>{identity?.email || 'Cloudflare Access user'} · Every account, journal entry, plan and session is isolated to this identity.</small></div></div></section>
+    </aside>
+  </div>;
 }
 
 function TradeModal({ plans = [], initialDate, onClose, onSave }) {
@@ -786,37 +810,33 @@ function PlanModal({ initialPlan, onClose, onSave }) {
     });
   };
 
-  return <Modal fullScreen onClose={onClose} eyebrow={initialPlan ? 'Edit trade playbook' : 'New trade playbook'} title={initialPlan ? `Refine ${initialPlan.name}` : 'Define the full execution model'}>
+  return <Modal drawer expandable panelClassName="playbook-drawer" onClose={onClose} title={initialPlan ? 'Edit playbook' : 'New playbook'}>
     <form className="playbook-flow-form" onSubmit={submit}>
       <div className="flow-meta">
         <Field label="Playbook name"><input value={name} onChange={event => setName(event.target.value)} placeholder="e.g. London liquidity sweep" autoFocus /></Field>
         <Field label="Market focus"><input value={market} onChange={event => setMarket(event.target.value)} placeholder="e.g. XAUUSD · London session" /></Field>
       </div>
-      <section className="playbook-definition">
-        <header><div><p>PLAYBOOK DEFINITION</p><h3>Define the conditions around execution</h3></div></header>
+      <section className="playbook-definition simple-playbook-section">
+        <header><h3>Playbook definition</h3></header>
         <div className="plan-definition-grid">
           <Field label="Entry model"><textarea value={entryModel} onChange={event => setEntryModel(event.target.value)} placeholder="Describe the market context, setup and trigger in plain language." /></Field>
-          <Field label="Entry criteria · one per line"><textarea value={entryCriteria} onChange={event => setEntryCriteria(event.target.value)} placeholder={'HTF bias aligned\nLiquidity sweep confirmed\n5m displacement closes'} /></Field>
-          <Field label="Trade management rules · one per line"><textarea value={managementRules} onChange={event => setManagementRules(event.target.value)} placeholder={'Partial 50% at 1R\nMove stop to break-even after 1R\nNo add-ons after first target'} /></Field>
-          <Field label="Exit criteria · one per line"><textarea value={exitCriteria} onChange={event => setExitCriteria(event.target.value)} placeholder={'Target opposing liquidity\nExit if structure invalidates\nClose before session end'} /></Field>
+          <Field label="Entry criteria"><textarea value={entryCriteria} onChange={event => setEntryCriteria(event.target.value)} placeholder="One criterion per line" /></Field>
+          <Field label="Management rules"><textarea value={managementRules} onChange={event => setManagementRules(event.target.value)} placeholder="One rule per line" /></Field>
+          <Field label="Exit criteria"><textarea value={exitCriteria} onChange={event => setExitCriteria(event.target.value)} placeholder="One condition per line" /></Field>
         </div>
       </section>
-      <section className="playbook-timeframe-section">
-        <header><div><p>TIMEFRAME EVIDENCE</p><h3>HTF, MTF and STF screenshots</h3></div><span>Each panel saves independently</span></header>
+      <section className="playbook-timeframe-section timeframe-evidence-simple">
         <div className="flow-evidence-row">
-          {FLOW_SCOPES.map(scope => <section className="flow-timeframe-evidence" key={scope}>
-            <div className="flow-evidence-heading"><span><b>{scope}</b><small>{(timeframeImages[scope] || []).length} screenshot{(timeframeImages[scope] || []).length === 1 ? '' : 's'}</small></span><Camera size={14} /></div>
-            <ImageUploader images={timeframeImages[scope] || []} onChange={nextImages => updateEvidence(scope, nextImages)} title={`${scope} chart`} help={`Upload the ${scope} structure view.`} />
-          </section>)}
+          {FLOW_SCOPES.map(scope => <ImageUploader compact key={scope} images={timeframeImages[scope] || []} onChange={nextImages => updateEvidence(scope, nextImages)} title={scope} />)}
         </div>
       </section>
-      <section className="playbook-timeframe-section">
-        <header><div><p>EXECUTION SEQUENCE</p><h3>Steps required at each timeframe</h3></div><span>Context → confirmation → entry</span></header>
+      <section className="playbook-timeframe-section simple-sequence-section">
+        <header><h3>Execution sequence</h3></header>
         <div className="flow-steps-row">
           {FLOW_SCOPES.map(scope => {
             const scopeSteps = steps.filter(step => step.scope === scope);
             return <section className="flow-layer-steps" key={scope}>
-              <header><div><p>{scope} STEPS</p><h3>{scope} execution path</h3></div><button type="button" onClick={() => addStep(scope)}><Plus size={12} /> Add step</button></header>
+              <header><h3>{scope}</h3><button type="button" onClick={() => addStep(scope)}><Plus size={12} /> Add step</button></header>
               <div className="flow-layer-step-list">
                 {scopeSteps.length ? scopeSteps.map((step, index) => <div className="flow-layer-step" key={step.id}>
                   <span>{String(index + 1).padStart(2, '0')}</span>
@@ -827,7 +847,7 @@ function PlanModal({ initialPlan, onClose, onSave }) {
                     <button type="button" disabled={index === scopeSteps.length - 1} onClick={() => moveScopeStep(scope, step.id, 1)} aria-label={`Move ${scope} step down`}>↓</button>
                     <button type="button" disabled={steps.length === 1} onClick={() => removeStep(step.id)} aria-label={`Delete ${scope} step`}><Trash2 size={12} /></button>
                   </div>
-                </div>) : <div className="flow-filter-empty layer-empty"><Target size={16} /><b>No {scope} steps</b><span>Add the first condition for this layer.</span></div>}
+                </div>) : null}
               </div>
             </section>;
           })}
@@ -840,7 +860,7 @@ function PlanModal({ initialPlan, onClose, onSave }) {
 }
 
 function AccountModal({ onClose, onSave, required = false }) {
-  const [form, setForm] = useState({ name: '', broker: '', type: 'Personal', startingBalance: 10000 });
+  const [form, setForm] = useState({ name: '', broker: '', type: 'Personal', startingBalance: 0 });
   const [error, setError] = useState('');
   const field = (key, value) => setForm(current => ({ ...current, [key]: value }));
   const submit = event => {
@@ -955,7 +975,7 @@ function SessionStatusModal({ session, onAcknowledge, onCancel }) {
   </Modal>;
 }
 
-function ImageUploader({ images = [], onChange, title, help }) {
+function ImageUploader({ images = [], onChange, title, help, compact = false }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
@@ -1008,7 +1028,7 @@ function ImageUploader({ images = [], onChange, title, help }) {
     processFiles(files);
   };
   const openPicker = () => !disabled && fileInputRef.current?.click();
-  return <section className={`image-uploader ${dragging ? 'dragging' : ''}`} onPaste={pasteImages} onDragEnter={enterDropZone} onDragOver={event => { event.preventDefault(); event.stopPropagation(); if (!disabled) event.dataTransfer.dropEffect = 'copy'; }} onDragLeave={leaveDropZone} onDrop={dropImages}><header><div><small>VISUAL EVIDENCE</small><h3>{title}</h3><p>{help}</p></div><button type="button" className="image-picker-button" onClick={openPicker} disabled={disabled}><Camera size={14} />{busy ? 'Processing…' : 'Add screenshots'}</button><input ref={fileInputRef} className="image-file-input" type="file" accept="image/*" multiple onChange={addImages} disabled={disabled} /></header><div className="image-drop-zone" role="button" tabIndex={disabled ? -1 : 0} aria-disabled={disabled} onClick={openPicker} onKeyDown={event => { if ((event.key === 'Enter' || event.key === ' ') && !disabled) { event.preventDefault(); openPicker(); } }}><Camera size={19} /><span>{dragging ? 'Release to add screenshots' : 'Drag and drop screenshots here'}</span><small>{images.length ? 'Add more files, click to browse, or focus here and paste' : 'Click to browse, or focus here and paste from your clipboard'}</small></div>{images.length ? <div className="image-preview-grid">{images.map((image, index) => <figure key={image.id || index}><img src={image.url} alt={`${title} ${index + 1}`} /><figcaption><span>{image.name || `Screenshot ${index + 1}`}</span><button type="button" onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove ${image.name || `screenshot ${index + 1}`}`}><X size={12} /></button></figcaption></figure>)}</div> : null}{error && <div className="form-error">{error}</div>}<footer>{images.length}/{MAX_IMAGES} images · compressed before D1 sync</footer></section>;
+  return <section className={`image-uploader ${compact ? 'compact-image-uploader' : ''} ${dragging ? 'dragging' : ''}`} onPaste={pasteImages} onDragEnter={enterDropZone} onDragOver={event => { event.preventDefault(); event.stopPropagation(); if (!disabled) event.dataTransfer.dropEffect = 'copy'; }} onDragLeave={leaveDropZone} onDrop={dropImages}><header>{compact ? <h3>{title}</h3> : <div><small>VISUAL EVIDENCE</small><h3>{title}</h3><p>{help}</p></div>}<button type="button" className="image-picker-button" onClick={openPicker} disabled={disabled}><Camera size={14} />{busy ? 'Processing…' : compact ? 'Add screenshot' : 'Add screenshots'}</button><input ref={fileInputRef} className="image-file-input" type="file" accept="image/*" multiple onChange={addImages} disabled={disabled} /></header>{!compact && <div className="image-drop-zone" role="button" tabIndex={disabled ? -1 : 0} aria-disabled={disabled} onClick={openPicker} onKeyDown={event => { if ((event.key === 'Enter' || event.key === ' ') && !disabled) { event.preventDefault(); openPicker(); } }}><Camera size={19} /><span>{dragging ? 'Release to add screenshots' : 'Drag and drop screenshots here'}</span><small>{images.length ? 'Add more files, click to browse, or focus here and paste' : 'Click to browse, or focus here and paste from your clipboard'}</small></div>}{images.length ? <div className="image-preview-grid">{images.map((image, index) => <figure key={image.id || index}><img src={image.url} alt={`${title} ${index + 1}`} /><figcaption><span>{image.name || `Screenshot ${index + 1}`}</span><button type="button" onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove ${image.name || `screenshot ${index + 1}`}`}><X size={12} /></button></figcaption></figure>)}</div> : null}{error && <div className="form-error">{error}</div>}{!compact && <footer>{images.length}/{MAX_IMAGES} images · compressed before D1 sync</footer>}</section>;
 }
 
 function TradeNoteModal({ trade, onClose, onSave }) {
@@ -1022,7 +1042,12 @@ function TradeNoteModal({ trade, onClose, onSave }) {
   return <Modal onClose={onClose} eyebrow="JOURNAL NOTE" title={`Add note · ${INSTRUMENTS[trade.symbol]?.label || trade.symbol}`}><form className="trade-note-form" onSubmit={submit}><div className="trade-note-context"><Instrument symbol={trade.symbol} /><span>{trade.setup || 'None'} · {new Date(trade.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span></div><Field label="Additional note"><textarea value={note} onChange={event => { setNote(event.target.value); setError(''); }} placeholder="Add an observation, lesson, or execution detail…" autoFocus /></Field><small>This note will be appended to the trade’s Additional Notes without replacing anything already saved.</small>{error && <div className="form-error">{error}</div>}<div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button"><Plus size={14} /> Append note</button></div></form></Modal>;
 }
 
-function Modal({ children, onClose, eyebrow, title, dismissible = true, drawer = false, fullScreen = false }) { return <div className={`modal-backdrop ${drawer ? 'modal-drawer-backdrop' : ''} ${fullScreen ? 'modal-fullscreen-backdrop' : ''}`} onMouseDown={e => dismissible && e.target === e.currentTarget && onClose()}><section className={`modal-panel ${drawer ? 'modal-drawer' : ''} ${fullScreen ? 'modal-fullscreen' : ''}`} role="dialog" aria-modal="true"><div className="modal-heading"><div><p>{eyebrow}</p><h2>{title}</h2></div>{dismissible && <button onClick={onClose}><X size={18} /></button>}</div>{children}</section></div>; }
+function Modal({ children, onClose, eyebrow, title, dismissible = true, drawer = false, fullScreen = false, expandable = false, panelClassName = '' }) {
+  const [expanded, setExpanded] = useState(false);
+  const isFullScreen = fullScreen || expanded;
+  const isDrawer = drawer && !isFullScreen;
+  return <div className={`modal-backdrop ${isDrawer ? 'modal-drawer-backdrop' : ''} ${isFullScreen ? 'modal-fullscreen-backdrop' : ''}`} onMouseDown={e => dismissible && e.target === e.currentTarget && onClose()}><section className={`modal-panel ${isDrawer ? 'modal-drawer' : ''} ${isFullScreen ? 'modal-fullscreen' : ''} ${panelClassName}`.trim()} role="dialog" aria-modal="true"><div className="modal-heading"><div><p>{eyebrow}</p><h2>{title}</h2></div><div className="modal-heading-actions">{expandable && <button type="button" onClick={() => setExpanded(current => !current)} aria-label={isFullScreen ? 'Return to side view' : 'Open full view'} title={isFullScreen ? 'Return to side view' : 'Open full view'}>{isFullScreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}</button>}{dismissible && <button type="button" onClick={onClose} aria-label="Close"><X size={18} /></button>}</div></div>{children}</section></div>;
+}
 function Field({ label, children }) { return <label className="field-label"><span>{label}</span>{children}</label>; }
 function NumberField({ value, onChange, suffix, prefix }) { return <div className="number-field">{prefix && <span>{prefix}</span>}<input type="number" step="any" value={value} onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))} />{suffix && <small>{suffix}</small>}</div>; }
 function DecimalInput({ value, onChange, placeholder }) { return <input className="decimal-input" type="text" inputMode="decimal" value={value} onChange={event => { const next = event.target.value; if (/^-?\d*\.?\d*$/.test(next)) onChange(next); }} placeholder={placeholder} />; }
