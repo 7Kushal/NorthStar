@@ -203,7 +203,13 @@ export function useAccountWorkspace(initialData) {
   const createAccount = details => {
     const id = crypto.randomUUID();
     const data = normalizeData(null, initialData);
-    data.settings.startingBalance = Number(details.startingBalance) || 0;
+    data.settings = {
+      ...data.settings,
+      startingBalance: Number(details.startingBalance) || 0,
+      maxDailyLoss: 0,
+      maxTrades: 0,
+      riskPerTrade: 0,
+    };
     const account = {
       id,
       name: details.name.trim(),
