@@ -877,6 +877,9 @@ input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-ou
 @media(prefers-reduced-motion:reduce){.app-shell:before{animation:none!important}.primary-button:before,.trade-button:before{display:none!important}}
 
 /* Strategy library is a true list: one complete playbook per row. */
+.neutral-value{color:var(--ink)!important}
+.journal-month-banner.profit .command-side b,.calendar-day.win-day>b{color:var(--green)!important}
+.journal-month-banner.loss .command-side b,.calendar-day.loss-day>b{color:var(--red)!important}
 .plan-grid{
   display:grid!important;
   grid-template-columns:minmax(0,1fr)!important;
