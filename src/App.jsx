@@ -51,6 +51,8 @@ const STRATEGY_TIMEFRAMES = ['M1', 'M3', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1', '
 
 const money = (value, sign = true) => `${sign && value > 0 ? '+' : ''}${value < 0 ? '−' : ''}$${Math.abs(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const plainMoney = value => Number.isFinite(value) ? `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
+const valueTone = value => Number(value) > 0 ? 'positive' : Number(value) < 0 ? 'negative' : 'neutral-value';
+const metricTone = value => Number(value) > 0 ? 'gain' : Number(value) < 0 ? 'loss' : 'neutral';
 const formatQuote = value => Number.isFinite(value) ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
 const uid = () => crypto.randomUUID();
 const listFromText = value => value.split('\n').map(item => item.trim()).filter(Boolean);
@@ -311,7 +313,7 @@ function Topbar({ page, onNewTrade, theme, onTheme, data, totalPnl, activeAccoun
   const balance = Number(data.settings.startingBalance || 0) + totalPnl;
   const equity = balance + openPnl;
   const syncTitle = syncStatus === 'saving' ? 'Syncing workspace to D1' : lastSyncedAt ? `D1 last synced at ${new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Sync workspace to D1';
-  return <header className="topbar"><div className="topbar-title">{eyebrow && <p>{eyebrow}</p>}<h1>{title}</h1><span className="topbar-account"><WalletCards size={12} /> {activeAccount.name}</span></div><div className="top-actions"><button className={`d1-sync-button icon-only ${syncStatus}`} onClick={onSync} disabled={syncStatus === 'saving'} title={syncTitle} aria-label={syncTitle}><Cloud size={14} /><RefreshCw size={10} className={syncStatus === 'saving' ? 'spinning' : ''} /></button><div className="today"><CalendarDays size={15} />{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div><button className="primary-button trade-button" onClick={onNewTrade} title="Log trade" aria-label="Log trade"><Plus size={19} /></button><HeaderUserMenu identity={identity} theme={theme} onTheme={onTheme} /></div><div className="account-strip" aria-label="Account status"><div><span>BALANCE</span><b>{plainMoney(balance)}</b></div><div><span>OPEN P&amp;L</span><b className="positive">{money(openPnl)}</b></div><div><span>EQUITY</span><b>{plainMoney(equity)}</b></div></div></header>;
+  return <header className="topbar"><div className="topbar-title">{eyebrow && <p>{eyebrow}</p>}<h1>{title}</h1><span className="topbar-account"><WalletCards size={12} /> {activeAccount.name}</span></div><div className="top-actions"><button className={`d1-sync-button icon-only ${syncStatus}`} onClick={onSync} disabled={syncStatus === 'saving'} title={syncTitle} aria-label={syncTitle}><Cloud size={14} /><RefreshCw size={10} className={syncStatus === 'saving' ? 'spinning' : ''} /></button><div className="today"><CalendarDays size={15} />{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div><button className="primary-button trade-button" onClick={onNewTrade} title="Log trade" aria-label="Log trade"><Plus size={19} /></button><HeaderUserMenu identity={identity} theme={theme} onTheme={onTheme} /></div><div className="account-strip" aria-label="Account status"><div><span>BALANCE</span><b className={valueTone(balance)}>{plainMoney(balance)}</b></div><div><span>OPEN P&amp;L</span><b className={valueTone(openPnl)}>{money(openPnl)}</b></div><div><span>EQUITY</span><b className={valueTone(equity)}>{plainMoney(equity)}</b></div></div></header>;
 }
 
 function HeaderUserMenu({ identity, theme, onTheme }) {
@@ -356,7 +358,7 @@ function Dashboard({ data, totalPnl, todayPnl, todayTrades, activePlan, go, them
   ];
   return <div className="page-stack">
     <section className="command-banner playbook-banner"><div className="command-side"><div><span>SELECTED PLAYBOOK</span><b>{activePlan?.name || 'None selected'}</b>{activePlan?.market && <small>{activePlan.market}</small>}</div><button onClick={() => go('plans')}>{activePlan ? 'View playbook' : 'Choose playbook'} <ArrowUpRight size={14} /></button></div></section>
-    <div className="stats-grid">{cards.map(([label, value, Icon, tone, help]) => <article className="stat-card" key={label}><div><span>{label}</span><i className={tone}><Icon size={17} /></i></div><strong className={label.includes('P&L') || label === 'Today' ? (value.includes('−') ? 'negative' : 'positive') : ''}>{value}</strong><small>{help}</small></article>)}</div>
+    <div className="stats-grid">{cards.map(([label, value, Icon, tone, help]) => <article className="stat-card" key={label}><div><span>{label}</span><i className={tone}><Icon size={17} /></i></div><strong className={label === 'Win rate' || label === 'Profit factor' ? 'positive' : label.includes('P&L') || label === 'Today' ? (value.startsWith('+') ? 'positive' : value.startsWith('−') ? 'negative' : 'neutral-value') : ''}>{value}</strong><small>{help}</small></article>)}</div>
     <div className="dashboard-grid"><GuardrailPanel data={data} todayTrades={todayTrades} todayPnl={todayPnl} go={go} onCheckIn={onCheckIn} /><EquityPanel trades={data.trades} start={data.settings.startingBalance} theme={theme} /></div>
     <RecentTrades trades={data.trades.slice(0, 5)} go={go} onEdit={onEditTrade} onAddNote={onAddNote} />
   </div>;
@@ -492,9 +494,9 @@ function Analytics({ trades, sessions, theme }) {
   let equity = 0, peak = 0, maxDrawdown = 0; [...trades].sort((a, b) => a.date.localeCompare(b.date)).forEach(t => { equity += t.pnl; peak = Math.max(peak, equity); maxDrawdown = Math.max(maxDrawdown, peak - equity); });
   const profitFactor = grossLoss ? grossWin / grossLoss : null;
   const metrics = [
-    ['Net P&L', money(equity), equity >= 0 ? 'gain' : 'loss'],
+    ['Net P&L', money(equity), metricTone(equity)],
     ['Profit factor', profitFactor === null ? '—' : profitFactor.toFixed(2), profitFactor === null ? 'neutral' : profitFactor >= 1 ? 'gain' : 'loss'],
-    ['Expectancy', expectancy === null ? '—' : money(expectancy), expectancy === null ? 'neutral' : expectancy >= 0 ? 'gain' : 'loss'],
+    ['Expectancy', expectancy === null ? '—' : money(expectancy), expectancy === null ? 'neutral' : metricTone(expectancy)],
     ['Avg. winner', wins.length ? money(grossWin / wins.length) : '—', wins.length ? 'gain' : 'neutral'],
     ['Max drawdown', trades.length ? `−${plainMoney(maxDrawdown)}` : '—', trades.length && maxDrawdown > 0 ? 'loss' : 'neutral'],
   ];
@@ -574,7 +576,8 @@ function Breakdown({ title, eyebrow, data, theme }) {
 
 function PlanImpact({ trades }) {
   const planned = trades.filter(t => t.plan), offPlan = trades.filter(t => !t.plan), avg = list => list.length ? list.reduce((s, t) => s + t.pnl, 0) / list.length : null;
-  return <section className="surface breakdown-card"><SectionTitle eyebrow="DISCIPLINE" title="Plan impact" /><div className="impact-grid"><div><span>Plan followed</span><b className="positive">{avg(planned) === null ? '—' : money(avg(planned))}</b><small>average · {planned.length} trades</small></div><div className="off-plan"><span>Off-plan</span><b className="negative">{avg(offPlan) === null ? '—' : money(avg(offPlan))}</b><small>average · {offPlan.length} trades</small></div></div></section>;
+  const plannedAverage = avg(planned), offPlanAverage = avg(offPlan);
+  return <section className="surface breakdown-card"><SectionTitle eyebrow="DISCIPLINE" title="Plan impact" /><div className="impact-grid"><div><span>Plan followed</span><b className={plannedAverage === null ? 'neutral-value' : valueTone(plannedAverage)}>{plannedAverage === null ? '—' : money(plannedAverage)}</b><small>average · {planned.length} trades</small></div><div className="off-plan"><span>Off-plan</span><b className={offPlanAverage === null ? 'neutral-value' : valueTone(offPlanAverage)}>{offPlanAverage === null ? '—' : money(offPlanAverage)}</b><small>average · {offPlan.length} trades</small></div></div></section>;
 }
 
 function DayPerformance({ trades }) {
@@ -588,7 +591,7 @@ function DayPerformance({ trades }) {
   const max = Math.max(1, ...values.map(Math.abs));
   const rangeEnd = new Date(weekEnd); rangeEnd.setDate(rangeEnd.getDate() - 1);
   const range = `${weekStart.toLocaleDateString([], { month: 'short', day: 'numeric' })} – ${rangeEnd.toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
-  return <section className="surface breakdown-card weekday-card"><div className="weekday-head"><SectionTitle eyebrow="TIMING" title="Weekday rhythm" /><div className="week-nav"><button type="button" onClick={() => setWeekOffset(offset => offset - 1)} aria-label="Previous week"><ChevronLeft size={15} /></button><span>{range}</span><button type="button" onClick={() => setWeekOffset(offset => Math.min(0, offset + 1))} disabled={weekOffset >= 0} aria-label="Next week"><ChevronRight size={15} /></button></div></div><div className="day-bars">{days.map((day, i) => <div key={day}><span>{money(values[i])}</span><i className={values[i] < 0 ? 'red' : ''} style={{ height: `${Math.max(4, Math.abs(values[i]) / max * 125)}px` }} /><b>{day}</b></div>)}</div></section>;
+  return <section className="surface breakdown-card weekday-card"><div className="weekday-head"><SectionTitle eyebrow="TIMING" title="Weekday rhythm" /><div className="week-nav"><button type="button" onClick={() => setWeekOffset(offset => offset - 1)} aria-label="Previous week"><ChevronLeft size={15} /></button><span>{range}</span><button type="button" onClick={() => setWeekOffset(offset => Math.min(0, offset + 1))} disabled={weekOffset >= 0} aria-label="Next week"><ChevronRight size={15} /></button></div></div><div className="day-bars">{days.map((day, i) => <div key={day}><span className={valueTone(values[i])}>{money(values[i])}</span><i className={values[i] < 0 ? 'red' : ''} style={{ height: `${Math.max(4, Math.abs(values[i]) / max * 125)}px` }} /><b>{day}</b></div>)}</div></section>;
 }
 
 function EconomicCalendar() {
