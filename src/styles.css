@@ -876,6 +876,21 @@ input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-ou
 
 @media(prefers-reduced-motion:reduce){.app-shell:before{animation:none!important}.primary-button:before,.trade-button:before{display:none!important}}
 
+/* Strategy library is a true list: one complete playbook per row. */
+.plan-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  align-items:start!important;
+  gap:14px!important;
+}
+.plan-grid>.plan-card{
+  width:100%!important;
+  min-width:0!important;
+}
+.plan-top-meta{display:flex;align-items:center;gap:10px}
+.plan-trade-count{display:inline-flex;align-items:baseline;gap:4px;padding:5px 8px;border:1px solid var(--liquid-edge-secondary);background:var(--liquid-panel-soft);color:var(--muted);font-size:9px;font-weight:750;letter-spacing:.25px;text-transform:none;white-space:nowrap;box-shadow:inset 0 1px var(--liquid-specular)}
+.plan-trade-count b{color:var(--ink);font-size:12px;line-height:1}
+
 /* Glass continuity across entry, banners, menus, and dense data views. */
 .welcome-screen{background:radial-gradient(circle at 76% 12%,rgba(34,117,255,.22),transparent 28%),radial-gradient(circle at 17% 78%,rgba(21,199,158,.13),transparent 25%),linear-gradient(145deg,#02060c,#07101b 54%,#03070c)!important}
 .welcome-aurora{filter:blur(46px) saturate(135%);opacity:.78}
