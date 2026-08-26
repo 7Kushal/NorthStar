@@ -28,6 +28,7 @@ function normalizeData(value, initialData) {
     trades: Array.isArray(source.trades) ? source.trades : [],
     positions: Array.isArray(source.positions) ? source.positions : [],
     plans: Array.isArray(source.plans) ? source.plans : [],
+    concepts: Array.isArray(source.concepts) ? source.concepts : [],
     sessions: Array.isArray(source.sessions) ? source.sessions : [],
     routine: { ...clone(initialData.routine), ...(source.routine || {}) },
     pendingSession: source.pendingSession || null,
@@ -64,8 +65,15 @@ function normalizeStore(value, initialData) {
 
 async function apiJson(path, options) {
   const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...options });
+  const contentType = response.headers.get('content-type') || '';
   let body = {};
-  try { body = await response.json(); } catch { /* A non-JSON proxy response is handled below. */ }
+  if (contentType.includes('application/json')) {
+    try { body = await response.json(); } catch { /* Invalid JSON is handled below. */ }
+  } else if (response.ok) {
+    const error = new Error('The Cloudflare Worker API is not active. Restart the multi-account development server.');
+    error.status = 503;
+    throw error;
+  }
   if (!response.ok) {
     const error = new Error(body.error || `Cloud sync returned ${response.status}`);
     error.status = response.status;
@@ -111,7 +119,12 @@ export function useAccountWorkspace(initialData) {
       try {
         const result = await apiJson('/api/workspace');
         if (!mounted) return;
-        const user = result.user;
+        const user = result?.user;
+        if (!user?.id) {
+          const error = new Error('Cloudflare Access did not return a valid user identity. Restart the multi-account development server.');
+          error.status = 503;
+          throw error;
+        }
         const userCacheKey = `${CACHE_PREFIX}${user.id}`;
         const cachedForUser = readJson(userCacheKey, null);
         let nextStore;
