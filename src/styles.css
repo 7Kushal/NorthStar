@@ -1097,3 +1097,50 @@ input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-ou
 .theme-dark.app-shell .topbar .trade-button:hover:not(:disabled){background:#417af5!important;box-shadow:none!important}
 .theme-dark .header-theme-option>i.on{background:#2f6df6!important}
 .theme-dark ::selection{background:#315fae!important;color:#fff!important}
+
+/* Concepts drawer: scroll content independently and keep actions inside the viewport. */
+.modal-drawer.concept-editor-drawer>.concept-form,
+.modal-drawer.concept-view-drawer>.concept-view-content{
+  display:flex!important;
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  flex-direction:column!important;
+  gap:0!important;
+  padding:0!important;
+}
+.concept-form-scroll,.concept-view-scroll{
+  display:grid;
+  flex:1 1 auto;
+  min-height:0;
+  align-content:start;
+  gap:18px;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:20px 22px 30px;
+  scrollbar-gutter:stable;
+}
+.concept-view-scroll{gap:14px}
+.modal-drawer.concept-editor-drawer>.concept-form>.modal-footer,
+.modal-drawer.concept-view-drawer>.concept-view-content>.modal-footer{
+  position:relative!important;
+  inset:auto!important;
+  z-index:4!important;
+  flex:0 0 auto!important;
+  min-height:68px!important;
+  margin:0!important;
+  padding:12px 22px calc(12px + env(safe-area-inset-bottom))!important;
+  border-top:1px solid var(--line)!important;
+  background:var(--surface)!important;
+  box-shadow:0 -12px 30px rgba(0,0,0,.16)!important;
+}
+.modal-drawer.concept-editor-drawer>.concept-form>.modal-footer>button,
+.modal-drawer.concept-view-drawer>.concept-view-content>.modal-footer>button{min-height:40px!important}
+.theme-dark .modal-drawer.concept-editor-drawer>.concept-form>.modal-footer,
+.theme-dark .modal-drawer.concept-view-drawer>.concept-view-content>.modal-footer{background:#0d0d0f!important;border-color:#25252a!important}
+@media(max-width:560px){
+  .concept-form-scroll,.concept-view-scroll{padding:16px 16px 24px}
+  .modal-drawer.concept-editor-drawer>.concept-form>.modal-footer,
+  .modal-drawer.concept-view-drawer>.concept-view-content>.modal-footer{padding:11px 16px calc(11px + env(safe-area-inset-bottom))!important}
+}

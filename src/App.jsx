@@ -707,10 +707,12 @@ function ConceptModal({ initialConcept, onClose, onSave }) {
   };
   return <Modal drawer expandable panelClassName="concept-editor-drawer" onClose={onClose} eyebrow={initialConcept ? 'EDIT CONCEPT' : 'NEW CONCEPT'} title={initialConcept ? 'Refine your concept' : 'Capture a market concept'}>
     <form className="concept-form" onSubmit={save}>
-      <Field label="Concept name"><input value={title} onChange={event => { setTitle(event.target.value); setError(''); }} placeholder="e.g. Failed breakout at session high" autoFocus /></Field>
-      <Field label="Concept notes"><textarea value={body} onChange={event => { setBody(event.target.value); setError(''); }} placeholder="Explain the context, confirmation and invalidation…" /></Field>
-      <ImageUploader images={images} onChange={setImages} title="Concept screenshots" help="Drop, paste or choose images that explain the idea." />
-      {error && <p className="form-error">{error}</p>}
+      <div className="concept-form-scroll">
+        <Field label="Concept name"><input value={title} onChange={event => { setTitle(event.target.value); setError(''); }} placeholder="e.g. Failed breakout at session high" autoFocus /></Field>
+        <Field label="Concept notes"><textarea value={body} onChange={event => { setBody(event.target.value); setError(''); }} placeholder="Explain the context, confirmation and invalidation…" /></Field>
+        <ImageUploader images={images} onChange={setImages} title="Concept screenshots" help="Drop, paste or choose images that explain the idea." />
+        {error && <p className="form-error">{error}</p>}
+      </div>
       <div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button type="submit" className="primary-button">{initialConcept ? 'Save changes' : 'Save concept'}</button></div>
     </form>
   </Modal>;
@@ -726,8 +728,10 @@ function ConceptViewModal({ concept, onClose, onEdit }) {
   }, [selectedImage]);
   return <><Modal drawer panelClassName="concept-view-drawer" onClose={onClose} eyebrow="TRADING CONCEPT" title={concept.title}>
     <div className="concept-view-content">
-      <section className="concept-view-section"><header>Notes</header><p className="concept-view-body">{concept.body || 'No notes recorded.'}</p></section>
-      <section className="concept-view-section"><header><span>Screenshots</span><b>{concept.images?.length || 0}</b></header>{concept.images?.length ? <div className="concept-view-images">{concept.images.map((image, index) => <button type="button" key={image.id || index} onClick={() => setSelectedImage({ ...image, index })}><span><img src={image.url} alt={image.name || `${concept.title} screenshot ${index + 1}`} /><i><Maximize2 size={15} /></i></span><small>{image.name || `Screenshot ${index + 1}`}</small></button>)}</div> : <div className="playbook-view-empty"><Camera size={18} /> No screenshots attached</div>}</section>
+      <div className="concept-view-scroll">
+        <section className="concept-view-section"><header>Notes</header><p className="concept-view-body">{concept.body || 'No notes recorded.'}</p></section>
+        <section className="concept-view-section"><header><span>Screenshots</span><b>{concept.images?.length || 0}</b></header>{concept.images?.length ? <div className="concept-view-images">{concept.images.map((image, index) => <button type="button" key={image.id || index} onClick={() => setSelectedImage({ ...image, index })}><span><img src={image.url} alt={image.name || `${concept.title} screenshot ${index + 1}`} /><i><Maximize2 size={15} /></i></span><small>{image.name || `Screenshot ${index + 1}`}</small></button>)}</div> : <div className="playbook-view-empty"><Camera size={18} /> No screenshots attached</div>}</section>
+      </div>
       <div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Close</button><button type="button" className="primary-button" onClick={onEdit}><Pencil size={14} /> Edit concept</button></div>
     </div>
   </Modal>{selectedImage && <div className="image-lightbox" role="dialog" aria-modal="true" aria-label="Fullscreen concept screenshot" onMouseDown={event => event.target === event.currentTarget && setSelectedImage(null)}><header><div><small>CONCEPT SCREENSHOT</small><b>{selectedImage.name || `Screenshot ${selectedImage.index + 1}`}</b></div><div><a href={selectedImage.url} target="_blank" rel="noreferrer" title="Open original in new tab"><ExternalLink size={17} /></a><button type="button" onClick={() => setSelectedImage(null)} aria-label="Close fullscreen screenshot"><X size={20} /></button></div></header><div className="image-lightbox-stage"><img src={selectedImage.url} alt={selectedImage.name || `${concept.title} fullscreen screenshot`} /></div></div>}</>;
