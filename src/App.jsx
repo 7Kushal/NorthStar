@@ -15,7 +15,7 @@ import { useEconomicCalendar } from './hooks/useEconomicCalendar';
 
 const INITIAL = {
   settings: { startingBalance: 0, maxDailyLoss: 0, maxTrades: 0, riskPerTrade: 0 },
-  trades: [], positions: [], plans: [], sessions: [],
+  trades: [], positions: [], plans: [], concepts: [], sessions: [],
   routine: { checks: [false, false, false, false, false], bias: '', notes: '', complete: false, completedAt: null },
   pendingSession: null,
 };
@@ -27,12 +27,14 @@ const NAV = [
   ['dashboard', LayoutDashboard, 'Overview'], ['journal', BookOpen, 'Journal'],
   ['analytics', BarChart3, 'Analytics'],
   ['plans', Target, 'Playbooks'],
+  ['concepts', Sparkles, 'Concepts'],
   ['settings', Settings, 'Risk control'],
 ];
 const TITLES = {
   dashboard: ['Overview', ''],
   journal: ['Trading journal', ''], analytics: ['Performance analytics', ''],
   premarket: ['Pre-market routine', ''], plans: ['Strategy playbooks', ''],
+  concepts: ['Concept library', ''],
   settings: ['Risk control', ''],
 };
 const CHECKS = ['Review scheduled market events', 'Mark higher-timeframe levels', 'Set session risk limits', 'Confirm active strategy', 'Check mental state and intention'];
@@ -185,6 +187,8 @@ export default function App() {
   const [tradeDate, setTradeDate] = useState(null);
   const [planModal, setPlanModal] = useState(null);
   const [viewPlan, setViewPlan] = useState(null);
+  const [conceptModal, setConceptModal] = useState(null);
+  const [viewConcept, setViewConcept] = useState(null);
   const [accountModal, setAccountModal] = useState(false);
   const [viewTrade, setViewTrade] = useState(null);
   const [reviewTrade, setReviewTrade] = useState(null);
@@ -220,7 +224,7 @@ export default function App() {
   };
   const selectAccount = id => {
     switchAccount(id);
-    setTradeModal(false); setPlanModal(null); setViewPlan(null); setViewTrade(null); setReviewTrade(null); setNoteTrade(null); setElefinModal(false);
+    setTradeModal(false); setPlanModal(null); setViewPlan(null); setConceptModal(null); setViewConcept(null); setViewTrade(null); setReviewTrade(null); setNoteTrade(null); setElefinModal(false);
   };
   const toggleNavigation = () => {
     if (window.matchMedia('(max-width: 820px)').matches) {
@@ -251,6 +255,7 @@ export default function App() {
         {page === 'analytics' && <Analytics trades={data.trades} sessions={sessions} theme={theme} />}
         {page === 'premarket' && <Premarket routine={data.routine} activePlan={activePlan} patch={patch} go={go} />}
         {page === 'plans' && <Plans plans={data.plans} trades={data.trades} patch={patch} onAdd={() => setPlanModal('new')} onView={setViewPlan} onEdit={setPlanModal} />}
+        {page === 'concepts' && <Concepts concepts={data.concepts || []} onAdd={() => setConceptModal('new')} onView={setViewConcept} onEdit={setConceptModal} onDelete={id => patch(next => { next.concepts = (next.concepts || []).filter(concept => concept.id !== id); })} />}
         {page === 'settings' && <RiskSettings settings={data.settings} patch={patch} account={activeAccount} identity={identity} syncStatus={syncStatus} />}
       </div>
     </main>
@@ -258,6 +263,8 @@ export default function App() {
     {tradeModal && <TradeModal plans={data.plans} initialDate={tradeDate} onClose={() => { setTradeModal(false); setTradeDate(null); }} onSave={trade => { addTrade(trade); setTradeModal(false); setTradeDate(null); }} />}
     {planModal && <PlanModal initialPlan={planModal === 'new' ? null : planModal} onClose={() => setPlanModal(null)} onSave={plan => { patch(next => { const index = next.plans.findIndex(item => item.id === plan.id); if (index >= 0) next.plans[index] = plan; else { if (!next.plans.length) plan.active = true; next.plans.push(plan); } }); setPlanModal(null); }} />}
     {viewPlan && <PlaybookViewModal plan={viewPlan} onClose={() => setViewPlan(null)} onEdit={() => { const selected = viewPlan; setViewPlan(null); setPlanModal(selected); }} />}
+    {conceptModal && <ConceptModal initialConcept={conceptModal === 'new' ? null : conceptModal} onClose={() => setConceptModal(null)} onSave={concept => { patch(next => { next.concepts ||= []; const index = next.concepts.findIndex(item => item.id === concept.id); if (index >= 0) next.concepts[index] = concept; else next.concepts.unshift(concept); }); setConceptModal(null); }} />}
+    {viewConcept && <ConceptViewModal concept={viewConcept} onClose={() => setViewConcept(null)} onEdit={() => { const selected = viewConcept; setViewConcept(null); setConceptModal(selected); }} />}
     {accountModal && <AccountModal onClose={() => setAccountModal(false)} onSave={details => { createAccount(details); setAccountModal(false); }} />}
     {viewTrade && <TradeViewModal trade={viewTrade} onClose={() => setViewTrade(null)} onEdit={() => { const selected = viewTrade; setViewTrade(null); setReviewTrade(selected); }} />}
     {reviewTrade && <ReviewModal trade={reviewTrade} plans={data.plans} onClose={() => setReviewTrade(null)} onSave={updates => { patch(next => Object.assign(next.trades.find(t => t.id === reviewTrade.id), updates)); setReviewTrade(null); }} />}
@@ -667,6 +674,62 @@ function Premarket({ routine, activePlan, patch, go }) {
   const ready = routine.checks.every(Boolean) && routine.bias && activePlan;
   const complete = () => ready && patch(next => { next.routine.complete = true; next.routine.completedAt = new Date().toISOString(); });
   return <div className="premarket-layout"><section className="surface routine-card"><div className="routine-header"><div><p>SESSION CHECKLIST</p><h2>Preparation creates permission.</h2><span>Execution unlocks when your process is complete.</span></div><div className={`progress-ring ${routine.complete ? 'done' : ''}`}><b>{routine.checks.filter(Boolean).length}</b><small>/ 5</small></div></div><div className="check-list">{CHECKS.map((label, index) => <button key={label} className={routine.checks[index] ? 'checked' : ''} onClick={() => toggle(index)}><i>{routine.checks[index] && <Check size={15} />}</i><span>{label}</span><em>{routine.checks[index] ? 'Complete' : 'Mark done'}</em></button>)}</div><div className="routine-fields"><Field label="Session bias"><select value={routine.bias} onChange={e => update({ bias: e.target.value })}><option value="">Select a directional bias</option><option>Bullish</option><option>Bearish</option><option>Neutral / wait</option></select></Field><Field label="Key levels and market context"><textarea value={routine.notes} onChange={e => update({ notes: e.target.value })} placeholder="Important levels, scheduled events, invalidation conditions…" /></Field></div><button className="primary-button complete-button" disabled={!ready} onClick={complete}>{routine.complete ? <><Check size={16} /> Routine completed</> : <>Complete pre-market <ArrowUpRight size={16} /></>}</button></section><aside className="premarket-aside"><section className="surface active-plan-card"><p>ACTIVE PLAYBOOK</p>{activePlan ? <><div className="plan-symbol"><Target size={20} /></div><h2>{activePlan.name}</h2><span>{activePlan.market || 'All connected markets'}</span><ul>{activePlan.rules.slice(0, 4).map(rule => <li key={rule}><Check size={13} />{rule}</li>)}</ul></> : <><div className="plan-symbol muted"><Target size={20} /></div><h2>No active playbook</h2><span>Create and select a strategy to complete preparation.</span><button onClick={() => go('plans')}>Create playbook <ArrowUpRight size={14} /></button></>}</section><section className={`session-state ${routine.complete ? 'ready' : ''}`}><ShieldCheck size={20} /><div><b>{routine.complete ? 'Session unlocked' : 'Execution locked'}</b><span>{routine.complete ? 'Your preparation is saved.' : 'Finish the checklist to enable orders.'}</span></div></section></aside></div>;
+}
+
+function Concepts({ concepts = [], onAdd, onView, onEdit, onDelete }) {
+  const ordered = [...concepts].sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+  return <div className="page-stack concepts-page">
+    <div className="concepts-head">
+      <div><h2>Concept library</h2><p>Save market ideas, observations and visual references.</p></div>
+      <button type="button" className="primary-button" onClick={onAdd}><Plus size={16} /> New concept</button>
+    </div>
+    {ordered.length ? <div className="concept-grid">{ordered.map(concept => <article className="surface concept-card" key={concept.id}>
+      <div className="concept-card-top"><span>TRADING CONCEPT</span><small>{new Date(concept.updatedAt || concept.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}</small></div>
+      {concept.images?.[0] ? <button type="button" className="concept-card-media" onClick={() => onView(concept)} aria-label={`View ${concept.title}`}><img src={concept.images[0].url} alt={concept.images[0].name || concept.title} />{concept.images.length > 1 && <span>+{concept.images.length - 1}</span>}</button> : <button type="button" className="concept-card-media empty" onClick={() => onView(concept)}><Camera size={24} /><span>No screenshot</span></button>}
+      <div className="concept-card-body"><h3>{concept.title}</h3><p>{concept.body || 'No notes recorded.'}</p></div>
+      <footer className="concept-card-footer"><span>{concept.images?.length || 0} screenshot{concept.images?.length === 1 ? '' : 's'}</span><div className="concept-card-actions"><button type="button" onClick={() => onView(concept)}><Eye size={13} /> View</button><button type="button" onClick={() => onEdit(concept)}><Pencil size={13} /> Edit</button><button type="button" className="icon-danger" onClick={() => window.confirm(`Delete “${concept.title}”?`) && onDelete(concept.id)} aria-label={`Delete ${concept.title}`}><Trash2 size={14} /></button></div></footer>
+    </article>)}</div> : <EmptyState large icon={Sparkles} title="Build your concept library" text="Capture an idea with notes and screenshots so it is ready when the market presents it." action="New concept" onAction={onAdd} />}
+  </div>;
+}
+
+function ConceptModal({ initialConcept, onClose, onSave }) {
+  const [title, setTitle] = useState(initialConcept?.title || '');
+  const [body, setBody] = useState(initialConcept?.body || '');
+  const [images, setImages] = useState(initialConcept?.images || []);
+  const [error, setError] = useState('');
+  const save = event => {
+    event.preventDefault();
+    if (!title.trim()) return setError('Add a name for this concept.');
+    if (!body.trim()) return setError('Add your notes for this concept.');
+    const now = new Date().toISOString();
+    onSave({ ...initialConcept, id: initialConcept?.id || uid(), title: title.trim(), body: body.trim(), images, createdAt: initialConcept?.createdAt || now, updatedAt: now });
+  };
+  return <Modal drawer expandable panelClassName="concept-editor-drawer" onClose={onClose} eyebrow={initialConcept ? 'EDIT CONCEPT' : 'NEW CONCEPT'} title={initialConcept ? 'Refine your concept' : 'Capture a market concept'}>
+    <form className="concept-form" onSubmit={save}>
+      <Field label="Concept name"><input value={title} onChange={event => { setTitle(event.target.value); setError(''); }} placeholder="e.g. Failed breakout at session high" autoFocus /></Field>
+      <Field label="Concept notes"><textarea value={body} onChange={event => { setBody(event.target.value); setError(''); }} placeholder="Explain the context, confirmation and invalidation…" /></Field>
+      <ImageUploader images={images} onChange={setImages} title="Concept screenshots" help="Drop, paste or choose images that explain the idea." />
+      {error && <p className="form-error">{error}</p>}
+      <div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button type="submit" className="primary-button">{initialConcept ? 'Save changes' : 'Save concept'}</button></div>
+    </form>
+  </Modal>;
+}
+
+function ConceptViewModal({ concept, onClose, onEdit }) {
+  const [selectedImage, setSelectedImage] = useState(null);
+  useEffect(() => {
+    if (!selectedImage) return undefined;
+    const closeOnEscape = event => event.key === 'Escape' && setSelectedImage(null);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [selectedImage]);
+  return <><Modal drawer panelClassName="concept-view-drawer" onClose={onClose} eyebrow="TRADING CONCEPT" title={concept.title}>
+    <div className="concept-view-content">
+      <section className="concept-view-section"><header>Notes</header><p className="concept-view-body">{concept.body || 'No notes recorded.'}</p></section>
+      <section className="concept-view-section"><header><span>Screenshots</span><b>{concept.images?.length || 0}</b></header>{concept.images?.length ? <div className="concept-view-images">{concept.images.map((image, index) => <button type="button" key={image.id || index} onClick={() => setSelectedImage({ ...image, index })}><span><img src={image.url} alt={image.name || `${concept.title} screenshot ${index + 1}`} /><i><Maximize2 size={15} /></i></span><small>{image.name || `Screenshot ${index + 1}`}</small></button>)}</div> : <div className="playbook-view-empty"><Camera size={18} /> No screenshots attached</div>}</section>
+      <div className="modal-footer"><button type="button" className="secondary-button" onClick={onClose}>Close</button><button type="button" className="primary-button" onClick={onEdit}><Pencil size={14} /> Edit concept</button></div>
+    </div>
+  </Modal>{selectedImage && <div className="image-lightbox" role="dialog" aria-modal="true" aria-label="Fullscreen concept screenshot" onMouseDown={event => event.target === event.currentTarget && setSelectedImage(null)}><header><div><small>CONCEPT SCREENSHOT</small><b>{selectedImage.name || `Screenshot ${selectedImage.index + 1}`}</b></div><div><a href={selectedImage.url} target="_blank" rel="noreferrer" title="Open original in new tab"><ExternalLink size={17} /></a><button type="button" onClick={() => setSelectedImage(null)} aria-label="Close fullscreen screenshot"><X size={20} /></button></div></header><div className="image-lightbox-stage"><img src={selectedImage.url} alt={selectedImage.name || `${concept.title} fullscreen screenshot`} /></div></div>}</>;
 }
 
 function Plans({ plans, trades = [], patch, onAdd, onView, onEdit }) {

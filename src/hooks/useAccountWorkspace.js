@@ -28,6 +28,7 @@ function normalizeData(value, initialData) {
     trades: Array.isArray(source.trades) ? source.trades : [],
     positions: Array.isArray(source.positions) ? source.positions : [],
     plans: Array.isArray(source.plans) ? source.plans : [],
+    concepts: Array.isArray(source.concepts) ? source.concepts : [],
     sessions: Array.isArray(source.sessions) ? source.sessions : [],
     routine: { ...clone(initialData.routine), ...(source.routine || {}) },
     pendingSession: source.pendingSession || null,
