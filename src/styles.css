@@ -965,3 +965,135 @@ input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-ou
 .app-shell .topbar .trade-button{width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;flex-basis:36px!important;background:linear-gradient(145deg,#3578f6,#1457d9)!important;border:1px solid #5f91f5!important;color:#fff!important;box-shadow:0 10px 24px rgba(20,87,217,.28),inset 0 1px rgba(255,255,255,.3)!important}
 .app-shell .topbar .trade-button:hover:not(:disabled){background:linear-gradient(145deg,#4a89ff,#2468e8)!important;box-shadow:0 13px 30px rgba(20,87,217,.35)!important}
 .app-shell .topbar .trade-button svg{width:18px!important;height:18px!important}
+
+/* Elefin reference system — compact Satoshi type, true-black surfaces, quiet hierarchy. */
+[data-theme="dark"]{
+  --bg:#070709;
+  --surface:#0f0f11;
+  --ink:#f3f3f4;
+  --sub:#b0b0b5;
+  --muted:#77777f;
+  --line:#242429;
+  --violet:#2f6df6;
+  --violet-2:#477fff;
+  --violet-soft:#121a2d;
+  --green:#2bd67b;
+  --green-soft:#0d281c;
+  --red:#ff6973;
+  --red-soft:#2a1418;
+  --gold:#d3a33c;
+  --glass-bg:rgba(15,15,17,.96);
+  --glass-bg-strong:rgba(11,11,13,.98);
+  --glass-bg-soft:rgba(18,18,21,.9);
+  --glass-line:rgba(255,255,255,.09);
+  --glass-line-soft:rgba(255,255,255,.065);
+  --glass-shadow:0 16px 42px rgba(0,0,0,.28);
+}
+.theme-dark{
+  font-family:var(--font-sans)!important;
+  font-size:14px;
+  color:var(--ink);
+  --liquid-panel:#0f0f11;
+  --liquid-panel-soft:#0b0b0d;
+  --liquid-control:#111114;
+  --liquid-edge:#26262b;
+  --liquid-edge-secondary:#1d1d21;
+  --liquid-specular:rgba(255,255,255,.035);
+  --liquid-shadow:0 16px 42px rgba(0,0,0,.25);
+}
+.theme-dark :is(button,input,select,textarea),
+.theme-dark :is(h1,h2,h3,h4,h5,h6),
+.theme-dark :is(.logo,.stat-card>strong,.analytics-metrics b,.session-kpis b,.day-summary b){font-family:var(--font-sans)!important}
+[data-theme="dark"] body,.theme-dark.app-shell,.theme-dark .main-shell{background:#070709!important}
+.theme-dark.app-shell:before{display:none!important}
+
+/* Shell and navigation */
+.theme-dark .sidebar{background:#09090b!important;border-color:#202024!important;box-shadow:none!important}
+.theme-dark .topbar{background:#0b0b0d!important;border-color:#232327!important;box-shadow:none!important;backdrop-filter:none!important}
+.theme-dark .topbar:after{display:none!important}
+.theme-dark .logo{color:#f5f5f6!important;font-size:25px!important;font-weight:650!important;letter-spacing:-.04em!important}
+.theme-dark .sidebar nav{gap:4px}
+.theme-dark .sidebar nav button{height:42px!important;color:#aaaab0!important;font-size:14px!important;font-weight:500!important;letter-spacing:-.01em!important;border:1px solid transparent!important;border-radius:2px!important}
+.theme-dark .sidebar nav button svg{color:#a2a2a8!important}
+.theme-dark .sidebar nav button:hover{background:#141416!important;border-color:#1f1f23!important;color:#f4f4f5!important}
+.theme-dark .sidebar nav button.active,.app-shell.nav-collapsed.theme-dark .sidebar nav button.active{background:#202024!important;border-color:#27272c!important;color:#fff!important;box-shadow:none!important}
+.theme-dark .sidebar nav button.active svg{color:#fff!important;background:transparent!important}
+.theme-dark .sidebar nav button i{background:#2f6df6!important}
+.theme-dark .system-chip{background:#0d0d0f!important;border-color:#202024!important;color:#73737b!important;font-size:12px!important}
+.theme-dark .account-switcher-trigger{background:#0f0f11!important;border-color:#29292e!important;color:#f1f1f2!important;box-shadow:none!important}
+.theme-dark .account-switcher-trigger:hover{background:#151518!important;border-color:#39393f!important}
+.theme-dark .account-switcher-trigger>span,.theme-dark .header-user-trigger>span,.theme-dark .account-option.active i,.theme-dark .account-menu header b,.theme-dark .header-profile-menu>header>span,.theme-dark .header-theme-option>span{background:#17171a!important;border-color:#2d2d32!important;color:#f1f1f3!important}
+
+/* Compact reference typography */
+.theme-dark .topbar h1{font-size:24px!important;font-weight:650!important;letter-spacing:-.04em!important}
+.theme-dark .topbar-title p{font-size:10px!important;letter-spacing:1.2px!important}
+.theme-dark .topbar-account{font-size:11px!important;color:#77777f!important}
+.theme-dark .account-strip{gap:34px!important}
+.theme-dark .account-strip span{font-size:9px!important;letter-spacing:.7px!important;color:#77777f!important}
+.theme-dark .account-strip b{font-size:14px!important;color:#ededee!important}
+.theme-dark :is(.page-intro p,.section-title p,.ticket-heading p,.routine-header p,.settings-copy>p,.modal-heading p,.calendar-head p,.insight-card>p,.control-header p,.concept-card-top span,.day-section-title p){font-size:10px!important;line-height:1.2!important;letter-spacing:1.25px!important;color:#77777f!important}
+.theme-dark :is(.page-intro h2,.concepts-head h2){font-size:25px!important;font-weight:650!important;letter-spacing:-.04em!important}
+.theme-dark .section-title h2,.theme-dark .control-header h2,.theme-dark .calendar-head h2{font-size:20px!important;font-weight:620!important;letter-spacing:-.035em!important}
+.theme-dark :is(.section-title button,.control-header button){font-size:12px!important;font-weight:600!important;color:#b8b8bd!important}
+.theme-dark :is(.page-intro>div>span,.concepts-head p){font-size:13px!important;color:#828289!important}
+.theme-dark :is(.today,.d1-sync-button,.header-user-trigger){font-size:13px!important}
+.theme-dark .primary-button,.theme-dark .secondary-button{font-size:13px!important;font-weight:600!important}
+
+/* Flat cards and dense KPI hierarchy */
+.theme-dark :is(.surface,.stat-card,.analytics-chart-card,.breakdown-chart-card,.chart-shell,.chart-card,.concept-card,.concept-view-section){background:#0f0f11!important;border:1px solid #25252a!important;outline:0!important;border-radius:12px!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.theme-dark :is(.surface,.stat-card):hover{border-color:#313137!important;box-shadow:none!important}
+.theme-dark .stats-grid{gap:14px!important}
+.theme-dark .stat-card{min-height:140px!important;padding:19px 20px!important}
+.theme-dark .stat-card>div>span{font-size:13px!important;font-weight:500!important;color:#85858d!important}
+.theme-dark .stat-card>strong{margin:19px 0 4px!important;font-size:30px!important;font-weight:650!important;letter-spacing:-.045em!important;color:#f3f3f4!important}
+.theme-dark .stat-card>small{font-size:12px!important;color:#77777f!important}
+.theme-dark .stat-card i{width:30px!important;height:30px!important;border-radius:8px!important}
+.theme-dark .stat-card i.violet,.theme-dark .stat-card i.blue{background:#151925!important;color:#5180f5!important}
+.theme-dark .stat-card i.green{background:#10251b!important;color:#2bd67b!important}
+.theme-dark .stat-card i.red{background:#291519!important;color:#ff6973!important}
+.theme-dark .analytics-metrics article{padding:17px!important}
+.theme-dark .analytics-metrics span{font-size:11px!important;color:#85858d!important}
+.theme-dark .analytics-metrics b{font-size:24px!important;font-weight:650!important}
+.theme-dark .positive{color:#2bd67b!important}.theme-dark .negative{color:#ff6973!important}.theme-dark .neutral-value{color:#f3f3f4!important}
+
+/* Controls, forms, tables and calendar */
+.theme-dark :is(.today,.round-button,.d1-sync-button,.header-user-trigger,.secondary-button,.image-picker-button,.sidebar-toggle){background:#111114!important;border:1px solid #29292e!important;color:#b7b7bd!important;box-shadow:none!important;backdrop-filter:none!important}
+.theme-dark :is(.today,.round-button,.d1-sync-button,.header-user-trigger,.secondary-button,.image-picker-button,.sidebar-toggle):hover{transform:none!important;background:#18181b!important;border-color:#3a3a40!important;color:#fff!important;box-shadow:none!important}
+.theme-dark :is(.field-label input,.field-label select,.field-label textarea,.number-field,.readonly-field,.flow-layer-step input,.flow-layer-step select,.search-box){background:#0b0b0d!important;border-color:#2a2a2f!important;color:#f1f1f3!important;box-shadow:none!important;backdrop-filter:none!important;font-size:14px!important}
+.theme-dark :is(.field-label input,.field-label select,.field-label textarea,.number-field,.flow-layer-step input,.flow-layer-step select,.search-box):focus,.theme-dark .number-field:focus-within{border-color:#4a4a51!important;box-shadow:0 0 0 3px rgba(255,255,255,.045)!important}
+.theme-dark .field-label>span{font-size:12px!important;color:#8b8b92!important}
+.theme-dark table th{font-size:10px!important;color:#727279!important;font-weight:600!important;letter-spacing:.7px!important}
+.theme-dark table td{font-size:13px!important;color:#b5b5bb!important;border-color:#222226!important}
+.theme-dark table tbody tr:hover{background:#141416!important}
+.theme-dark .grade{background:#18181b!important;color:#bdbdc2!important}
+.theme-dark .calendar-day,.theme-dark .calendar-days>div{background:#0d0d0f!important;border-color:#232328!important;color:#8b8b92!important}
+.theme-dark .calendar-day:hover{background:#151518!important;border-color:#3b3b42!important;box-shadow:none!important}
+.theme-dark .calendar-day.today-date{background:#17171a!important;border-color:#46464d!important}
+.theme-dark .today-marker,.theme-dark .calendar-day>mark{background:#202024!important;border-color:#303036!important;color:#d4d4d7!important}
+.theme-dark .calendar-day b{font-size:13px!important}.theme-dark .calendar-day small,.theme-dark .calendar-day em{font-size:10px!important}
+
+/* Quiet internal surfaces, menus and overlays */
+.theme-dark :is(.control-readiness,.risk-usage article,.journal-form-section,.playbook-definition,.image-uploader,.day-memory-section,.concept-view-section,.playbook-timeframe-section,.flow-editor,.flow-preview,.flow-layer-steps,.flow-timeframe-evidence){background:#0b0b0d!important;border-color:#242429!important}
+.theme-dark .risk-usage article>i{background:#202024!important}
+.theme-dark .risk-usage article>i>u{background:#2bd67b!important}
+.theme-dark .guard-action{background:#17171a!important;border-color:#313137!important;color:#ededee!important}
+.theme-dark :is(.header-profile-menu,.account-menu,.profile-menu){background:#0d0d0f!important;border-color:#29292e!important;box-shadow:0 24px 70px rgba(0,0,0,.55)!important}
+.theme-dark :is(.modal-panel,.modal-drawer,.modal-fullscreen,.journal-day-panel){background:#0b0b0d!important;border-color:#29292e!important;box-shadow:-24px 0 80px rgba(0,0,0,.56)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.theme-dark :is(.modal-heading,.modal-footer){background:#0d0d0f!important;border-color:#25252a!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.theme-dark .modal-heading h2{font-size:24px!important;font-weight:650!important}
+.theme-dark .concept-card-body h3{font-size:18px!important}.theme-dark .concept-card-body p,.theme-dark .concept-view-body{font-size:13px!important}
+
+/* Banners become restrained account-summary panels. */
+.theme-dark .command-banner{background:#0f0f11!important;border:1px solid #29292e!important;color:#f3f3f4!important;border-radius:12px!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.theme-dark .command-banner:before,.theme-dark .command-banner:after{border-color:rgba(255,255,255,.035)!important}
+.theme-dark .command-side{border-color:#29292e!important}
+.theme-dark .command-side span,.theme-dark .command-side small,.theme-dark .command-banner>div>p{color:#7d7d84!important}
+.theme-dark .command-side b{font-size:20px!important;color:#f3f3f4!important}
+.theme-dark .command-side button{background:#17171a!important;border-color:#323238!important;color:#ededee!important}
+.theme-dark .command-side button:hover{background:#202024!important}
+
+/* Keep the global trade action compact and clearly actionable. */
+.theme-dark.app-shell .topbar .trade-button{background:#2f6df6!important;border-color:#4a7df4!important;color:#fff!important;box-shadow:none!important}
+.theme-dark.app-shell .topbar .trade-button:hover:not(:disabled){background:#417af5!important;box-shadow:none!important}
+.theme-dark .header-theme-option>i.on{background:#2f6df6!important}
+.theme-dark ::selection{background:#315fae!important;color:#fff!important}
