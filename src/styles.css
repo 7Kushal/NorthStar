@@ -913,10 +913,10 @@ input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-ou
 .concept-form{display:grid;gap:18px;padding:22px 24px 120px}.concept-form .field-label textarea{min-height:210px;resize:vertical;line-height:1.65}.concept-view-content{display:grid;gap:14px;padding:20px 22px 110px}.concept-view-section{padding:18px;border:1px solid var(--liquid-edge-secondary);border-radius:4px;background:var(--liquid-panel-soft)}.concept-view-section>header{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;color:var(--ink);font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}.concept-view-section>header b{display:grid;min-width:29px;height:26px;padding:0 7px;place-items:center;background:rgba(44,118,224,.11);color:var(--blue);font-size:11px}.concept-view-body{margin:0;color:var(--ink);font-size:14px;line-height:1.75;white-space:pre-wrap}.concept-view-images{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.concept-view-images button{min-width:0;padding:0;border:0;background:transparent;color:var(--muted);text-align:left;cursor:pointer}.concept-view-images button>span{position:relative;display:block;height:155px;overflow:hidden;border:1px solid var(--liquid-edge-secondary);border-radius:3px;background:#05080d}.concept-view-images img{width:100%;height:100%;object-fit:cover;transition:transform .25s ease}.concept-view-images i{position:absolute;right:8px;bottom:8px;display:grid;width:30px;height:30px;place-items:center;border-radius:50%;background:rgba(2,8,17,.75);color:#fff;opacity:0;transition:opacity .2s ease}.concept-view-images button:hover img{transform:scale(1.018)}.concept-view-images button:hover i{opacity:1}.concept-view-images small{display:block;overflow:hidden;margin-top:6px;font-size:10.5px;text-overflow:ellipsis;white-space:nowrap}.theme-light :is(.concept-card,.concept-view-section),.theme-dark :is(.concept-card,.concept-view-section){background:var(--liquid-panel)!important;border:1px solid var(--liquid-edge)!important;outline:1px solid var(--liquid-edge-secondary);outline-offset:-1px;box-shadow:var(--liquid-shadow)!important;backdrop-filter:blur(30px) saturate(175%)!important;-webkit-backdrop-filter:blur(30px) saturate(175%)!important}.concept-editor-drawer,.concept-view-drawer{width:min(50vw,760px)!important}
 @media(max-width:900px){.concept-grid{grid-template-columns:1fr}.concept-editor-drawer,.concept-view-drawer{width:min(94vw,680px)!important}.concepts-head{align-items:flex-start}.concept-card-media{height:170px}}@media(max-width:560px){.concepts-head{display:grid}.concepts-head .primary-button{width:100%}.concept-view-images{grid-template-columns:1fr}.concept-card-actions button{padding:0 8px}.concept-card-actions button:not(.icon-danger) svg{display:none}}
 
-/* Amber graphite dark mode — blue is reserved for the global trade-entry action. */
+/* Cobalt graphite dark mode — blue drives interaction while outcomes stay green/red. */
 [data-theme="dark"]{
   --bg:#070604;--surface:#11100e;--ink:#f6f2eb;--sub:#b8afa3;--muted:#837a70;--line:#2b2823;
-  --violet:#f59e0b;--violet-2:#ffb340;--violet-soft:#2b1d0b;--gold:#f0a72d;
+  --violet:#0a4df0;--violet-2:#2f6df6;--violet-soft:#111a31;--gold:#f0a72d;
   --glass-bg:rgba(17,15,12,.72);--glass-bg-strong:rgba(14,13,11,.9);--glass-bg-soft:rgba(24,21,17,.62);
   --glass-line:rgba(255,181,79,.13);--glass-line-soft:rgba(181,156,123,.15);
   --glass-shadow:0 24px 64px rgba(0,0,0,.46),inset 0 1px rgba(255,224,184,.07),inset 0 -1px rgba(0,0,0,.3);
@@ -925,43 +925,222 @@ input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-ou
   --liquid-panel:linear-gradient(145deg,rgba(28,24,19,.8),rgba(10,9,8,.76) 56%,rgba(18,15,11,.72));
   --liquid-panel-soft:linear-gradient(145deg,rgba(31,27,22,.61),rgba(12,11,9,.55));
   --liquid-control:linear-gradient(145deg,rgba(34,30,25,.82),rgba(13,12,10,.76));
-  --liquid-edge:rgba(255,187,94,.15);--liquid-edge-secondary:rgba(181,153,116,.14);
+  --liquid-edge:rgba(78,125,246,.17);--liquid-edge-secondary:rgba(130,145,175,.14);
   --liquid-specular:rgba(255,224,184,.15);
   --liquid-shadow:0 23px 60px rgba(0,0,0,.46),0 6px 18px rgba(0,0,0,.28),inset 0 1px rgba(255,225,187,.07),inset 0 -1px rgba(0,0,0,.45);
 }
 [data-theme="dark"] body,.theme-dark.app-shell,.theme-dark .main-shell{background:#070604!important}
-.theme-dark.app-shell:before{opacity:.72!important;background:radial-gradient(circle at 78% 7%,rgba(245,158,11,.16),transparent 28%),radial-gradient(circle at 13% 84%,rgba(128,88,34,.12),transparent 27%),radial-gradient(circle at 48% 44%,rgba(111,103,93,.07),transparent 32%)!important}
+.theme-dark.app-shell:before{opacity:.72!important;background:radial-gradient(circle at 78% 7%,rgba(47,109,246,.16),transparent 28%),radial-gradient(circle at 13% 84%,rgba(32,69,138,.12),transparent 27%),radial-gradient(circle at 48% 44%,rgba(111,117,128,.07),transparent 32%)!important}
 .theme-dark .sidebar{background:linear-gradient(180deg,rgba(10,9,7,.98),rgba(5,5,4,.98))!important;border-color:#29251f!important}
-.theme-dark .topbar{background:rgba(8,7,6,.9)!important;border-color:#29251f!important;box-shadow:0 14px 42px rgba(0,0,0,.24),inset 0 -1px rgba(255,176,64,.08)!important}
-.theme-dark .topbar:after{background:linear-gradient(90deg,transparent,rgba(245,158,11,.38),transparent)!important}
+.theme-dark .topbar{background:rgba(8,7,6,.9)!important;border-color:#29251f!important;box-shadow:0 14px 42px rgba(0,0,0,.24),inset 0 -1px rgba(47,109,246,.08)!important}
+.theme-dark .topbar:after{background:linear-gradient(90deg,transparent,rgba(47,109,246,.38),transparent)!important}
 .theme-dark .sidebar nav button{color:#938b82!important}
 .theme-dark .sidebar nav button:hover{background:#17140f!important;border-color:#352d22!important;color:#fff8ee!important}
-.theme-dark .sidebar nav button.active,.app-shell.nav-collapsed.theme-dark .sidebar nav button.active{background:linear-gradient(145deg,rgba(111,69,14,.62),rgba(24,18,10,.76))!important;border-color:rgba(245,158,11,.38)!important;color:#fff8ec!important;box-shadow:0 13px 32px rgba(0,0,0,.34),inset 0 1px rgba(255,220,170,.1)!important}
-.theme-dark .sidebar nav button.active svg,.theme-dark .sidebar nav button i{color:#ffb340!important;background-color:transparent!important}
-.theme-dark .sidebar nav button i{background:#f59e0b!important}
-.theme-dark .account-switcher-trigger>span,.theme-dark .header-user-trigger>span,.theme-dark .account-option.active i,.theme-dark .account-menu header b,.theme-dark .header-profile-menu>header>span,.theme-dark .header-theme-option>span{background:#2b1d0b!important;border-color:#65400f!important;color:#ffb340!important}
-.theme-dark .header-theme-option>i.on{background:#d98606!important}
-.theme-dark .primary-button{background:linear-gradient(135deg,#ffb340,#d97706)!important;border-color:#ffb340!important;color:#17100a!important;box-shadow:0 12px 30px rgba(217,119,6,.24),inset 0 1px rgba(255,255,255,.32)!important}
-.theme-dark .primary-button:hover:not(:disabled){background:linear-gradient(135deg,#ffc25c,#e78908)!important;color:#140d07!important}
-.theme-dark .secondary-button{background:rgba(245,158,11,.08)!important;border-color:rgba(245,158,11,.28)!important;color:#f6ad32!important}
-.theme-dark .secondary-button:hover{background:rgba(245,158,11,.14)!important;border-color:rgba(245,158,11,.45)!important;color:#ffc15b!important}
-.theme-dark .stat-card i.violet,.theme-dark .stat-card i.blue{background:#2b1d0b!important;color:#ffac2f!important}
-.theme-dark .command-banner{background:radial-gradient(circle at 90% -18%,rgba(255,178,62,.23),transparent 43%),linear-gradient(135deg,rgba(34,27,17,.92),rgba(11,10,8,.9) 58%,rgba(45,27,7,.88))!important;border-color:rgba(245,158,11,.28)!important;box-shadow:0 22px 56px rgba(0,0,0,.38),inset 0 1px rgba(255,220,170,.1)!important}
-.theme-dark .command-side button{border-color:rgba(245,158,11,.32)!important;color:#ffbd52!important;background:rgba(245,158,11,.08)!important}
-.theme-dark .command-side button:hover{background:rgba(245,158,11,.16)!important}
-.theme-dark :is(.field-label input,.field-label select,.field-label textarea,.number-field,.readonly-field,.flow-layer-step input,.flow-layer-step select,.search-box):focus,.theme-dark .number-field:focus-within{border-color:rgba(245,158,11,.72)!important;box-shadow:0 0 0 4px rgba(245,158,11,.12),inset 0 1px rgba(255,255,255,.06)!important}
-.theme-dark :is(.section-title button,.control-header button,.plan-view-button,.day-view-action,.view-trade-action,.concept-card-actions .concept-view-action){color:#ffad32!important;border-color:rgba(245,158,11,.34)!important}
-.theme-dark :is(.plan-timeframe-badge,.setup-playbook-quicklist button.active,.setup-playbook-quicklist button:hover){background:rgba(245,158,11,.11)!important;border-color:rgba(245,158,11,.34)!important;color:#ffb340!important}
+.theme-dark .sidebar nav button.active,.app-shell.nav-collapsed.theme-dark .sidebar nav button.active{background:linear-gradient(145deg,rgba(19,47,105,.68),rgba(10,16,29,.78))!important;border-color:rgba(47,109,246,.42)!important;color:#f4f7ff!important;box-shadow:0 13px 32px rgba(0,0,0,.34),inset 0 1px rgba(134,172,255,.1)!important}
+.theme-dark .sidebar nav button.active svg,.theme-dark .sidebar nav button i{color:#5f8cff!important;background-color:transparent!important}
+.theme-dark .sidebar nav button i{background:#2f6df6!important}
+.theme-dark .account-switcher-trigger>span,.theme-dark .header-user-trigger>span,.theme-dark .account-option.active i,.theme-dark .account-menu header b,.theme-dark .header-profile-menu>header>span,.theme-dark .header-theme-option>span{background:#111a31!important;border-color:#244b9f!important;color:#5f8cff!important}
+.theme-dark .header-theme-option>i.on{background:#2f6df6!important}
+.theme-dark .primary-button{background:linear-gradient(135deg,#2f6df6,#0a4df0)!important;border-color:#4a7df4!important;color:#fff!important;box-shadow:0 12px 30px rgba(10,77,240,.25),inset 0 1px rgba(255,255,255,.24)!important}
+.theme-dark .primary-button:hover:not(:disabled){background:linear-gradient(135deg,#477fff,#185bff)!important;color:#fff!important}
+.theme-dark .secondary-button{background:rgba(47,109,246,.08)!important;border-color:rgba(47,109,246,.28)!important;color:#6f98ff!important}
+.theme-dark .secondary-button:hover{background:rgba(47,109,246,.14)!important;border-color:rgba(47,109,246,.45)!important;color:#91aeff!important}
+.theme-dark .stat-card i.violet,.theme-dark .stat-card i.blue{background:#111a31!important;color:#5f8cff!important}
+.theme-dark .command-banner{background:radial-gradient(circle at 90% -18%,rgba(47,109,246,.22),transparent 43%),linear-gradient(135deg,rgba(17,25,43,.92),rgba(10,10,12,.9) 58%,rgba(10,29,69,.88))!important;border-color:rgba(47,109,246,.28)!important;box-shadow:0 22px 56px rgba(0,0,0,.38),inset 0 1px rgba(134,172,255,.1)!important}
+.theme-dark .command-side button{border-color:rgba(47,109,246,.32)!important;color:#6f98ff!important;background:rgba(47,109,246,.08)!important}
+.theme-dark .command-side button:hover{background:rgba(47,109,246,.16)!important}
+.theme-dark :is(.field-label input,.field-label select,.field-label textarea,.number-field,.readonly-field,.flow-layer-step input,.flow-layer-step select,.search-box):focus,.theme-dark .number-field:focus-within{border-color:rgba(47,109,246,.72)!important;box-shadow:0 0 0 4px rgba(47,109,246,.12),inset 0 1px rgba(255,255,255,.06)!important}
+.theme-dark :is(.section-title button,.control-header button,.plan-view-button,.day-view-action,.view-trade-action,.concept-card-actions .concept-view-action){color:#5f8cff!important;border-color:rgba(47,109,246,.34)!important}
+.theme-dark :is(.plan-timeframe-badge,.setup-playbook-quicklist button.active,.setup-playbook-quicklist button:hover){background:rgba(47,109,246,.11)!important;border-color:rgba(47,109,246,.34)!important;color:#6f98ff!important}
 .theme-dark :is(.control-readiness,.risk-usage article,.journal-form-section,.playbook-definition,.image-uploader,.day-memory-section,.concept-view-section){background:linear-gradient(145deg,rgba(27,24,20,.64),rgba(11,10,8,.62))!important;border-color:rgba(181,153,116,.15)!important}
-.theme-dark .risk-usage article>i>u,.theme-dark .guard-action{background:linear-gradient(90deg,#f59e0b,#ffb340)!important;border-color:#f59e0b!important;color:#17100a!important}
-.theme-dark .calendar-day.today-date{background:rgba(245,158,11,.09)!important;border-color:rgba(245,158,11,.62)!important}
-.theme-dark .today-marker,.theme-dark .calendar-day>mark{background:rgba(245,158,11,.13)!important;border-color:rgba(245,158,11,.24)!important;color:#ffb340!important}
-.theme-dark .concept-view-section>header b{background:rgba(245,158,11,.11)!important;color:#ffb340!important}
-.theme-dark :is(.header-profile-menu,.account-menu) button:hover{border-color:rgba(245,158,11,.34)!important}
-.theme-dark table tbody tr:hover{background:rgba(245,158,11,.055)!important}
-.theme-dark ::selection{background:#a85f08!important;color:#fff8eb!important}
+.theme-dark .risk-usage article>i>u,.theme-dark .guard-action{background:linear-gradient(90deg,#0a4df0,#2f6df6)!important;border-color:#2f6df6!important;color:#fff!important}
+.theme-dark .calendar-day.today-date{background:rgba(47,109,246,.09)!important;border-color:rgba(47,109,246,.62)!important}
+.theme-dark .today-marker,.theme-dark .calendar-day>mark{background:rgba(47,109,246,.13)!important;border-color:rgba(47,109,246,.24)!important;color:#6f98ff!important}
+.theme-dark .concept-view-section>header b{background:rgba(47,109,246,.11)!important;color:#6f98ff!important}
+.theme-dark :is(.header-profile-menu,.account-menu) button:hover{border-color:rgba(47,109,246,.34)!important}
+.theme-dark table tbody tr:hover{background:rgba(47,109,246,.055)!important}
+.theme-dark ::selection{background:#244f9e!important;color:#fff!important}
 
 /* Keep trade entry blue, but match the compact LT account-control height. */
 .app-shell .topbar .trade-button{width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;flex-basis:36px!important;background:linear-gradient(145deg,#3578f6,#1457d9)!important;border:1px solid #5f91f5!important;color:#fff!important;box-shadow:0 10px 24px rgba(20,87,217,.28),inset 0 1px rgba(255,255,255,.3)!important}
 .app-shell .topbar .trade-button:hover:not(:disabled){background:linear-gradient(145deg,#4a89ff,#2468e8)!important;box-shadow:0 13px 30px rgba(20,87,217,.35)!important}
 .app-shell .topbar .trade-button svg{width:18px!important;height:18px!important}
+
+/* Elefin reference system — compact Satoshi type, true-black surfaces, quiet hierarchy. */
+[data-theme="dark"]{
+  --bg:#070709;
+  --surface:#0f0f11;
+  --ink:#f3f3f4;
+  --sub:#b0b0b5;
+  --muted:#77777f;
+  --line:#242429;
+  --violet:#2f6df6;
+  --violet-2:#477fff;
+  --violet-soft:#121a2d;
+  --green:#2bd67b;
+  --green-soft:#0d281c;
+  --red:#ff6973;
+  --red-soft:#2a1418;
+  --gold:#d3a33c;
+  --glass-bg:rgba(15,15,17,.96);
+  --glass-bg-strong:rgba(11,11,13,.98);
+  --glass-bg-soft:rgba(18,18,21,.9);
+  --glass-line:rgba(255,255,255,.09);
+  --glass-line-soft:rgba(255,255,255,.065);
+  --glass-shadow:0 16px 42px rgba(0,0,0,.28);
+}
+.theme-dark{
+  font-family:var(--font-sans)!important;
+  font-size:14px;
+  color:var(--ink);
+  --liquid-panel:#0f0f11;
+  --liquid-panel-soft:#0b0b0d;
+  --liquid-control:#111114;
+  --liquid-edge:#26262b;
+  --liquid-edge-secondary:#1d1d21;
+  --liquid-specular:rgba(255,255,255,.035);
+  --liquid-shadow:0 16px 42px rgba(0,0,0,.25);
+}
+.theme-dark :is(button,input,select,textarea),
+.theme-dark :is(h1,h2,h3,h4,h5,h6),
+.theme-dark :is(.logo,.stat-card>strong,.analytics-metrics b,.session-kpis b,.day-summary b){font-family:var(--font-sans)!important}
+[data-theme="dark"] body,.theme-dark.app-shell,.theme-dark .main-shell{background:#070709!important}
+.theme-dark.app-shell:before{display:none!important}
+
+/* Shell and navigation */
+.theme-dark .sidebar{background:#09090b!important;border-color:#202024!important;box-shadow:none!important}
+.theme-dark .topbar{background:#0b0b0d!important;border-color:#232327!important;box-shadow:none!important;backdrop-filter:none!important}
+.theme-dark .topbar:after{display:none!important}
+.theme-dark .logo{color:#f5f5f6!important;font-size:25px!important;font-weight:650!important;letter-spacing:-.04em!important}
+.theme-dark .sidebar nav{gap:4px}
+.theme-dark .sidebar nav button{height:42px!important;color:#aaaab0!important;font-size:14px!important;font-weight:500!important;letter-spacing:-.01em!important;border:1px solid transparent!important;border-radius:2px!important}
+.theme-dark .sidebar nav button svg{color:#a2a2a8!important}
+.theme-dark .sidebar nav button:hover{background:#141416!important;border-color:#1f1f23!important;color:#f4f4f5!important}
+.theme-dark .sidebar nav button.active,.app-shell.nav-collapsed.theme-dark .sidebar nav button.active{background:#202024!important;border-color:#27272c!important;color:#fff!important;box-shadow:none!important}
+.theme-dark .sidebar nav button.active svg{color:#fff!important;background:transparent!important}
+.theme-dark .sidebar nav button i{background:#2f6df6!important}
+.theme-dark .system-chip{background:#0d0d0f!important;border-color:#202024!important;color:#73737b!important;font-size:12px!important}
+.theme-dark .account-switcher-trigger{background:#0f0f11!important;border-color:#29292e!important;color:#f1f1f2!important;box-shadow:none!important}
+.theme-dark .account-switcher-trigger:hover{background:#151518!important;border-color:#39393f!important}
+.theme-dark .account-switcher-trigger>span,.theme-dark .header-user-trigger>span,.theme-dark .account-option.active i,.theme-dark .account-menu header b,.theme-dark .header-profile-menu>header>span,.theme-dark .header-theme-option>span{background:#17171a!important;border-color:#2d2d32!important;color:#f1f1f3!important}
+
+/* Compact reference typography */
+.theme-dark .topbar h1{font-size:24px!important;font-weight:650!important;letter-spacing:-.04em!important}
+.theme-dark .topbar-title p{font-size:10px!important;letter-spacing:1.2px!important}
+.theme-dark .topbar-account{font-size:11px!important;color:#77777f!important}
+.theme-dark .account-strip{gap:34px!important}
+.theme-dark .account-strip span{font-size:9px!important;letter-spacing:.7px!important;color:#77777f!important}
+.theme-dark .account-strip b{font-size:14px!important;color:#ededee!important}
+.theme-dark :is(.page-intro p,.section-title p,.ticket-heading p,.routine-header p,.settings-copy>p,.modal-heading p,.calendar-head p,.insight-card>p,.control-header p,.concept-card-top span,.day-section-title p){font-size:10px!important;line-height:1.2!important;letter-spacing:1.25px!important;color:#77777f!important}
+.theme-dark :is(.page-intro h2,.concepts-head h2){font-size:25px!important;font-weight:650!important;letter-spacing:-.04em!important}
+.theme-dark .section-title h2,.theme-dark .control-header h2,.theme-dark .calendar-head h2{font-size:20px!important;font-weight:620!important;letter-spacing:-.035em!important}
+.theme-dark :is(.section-title button,.control-header button){font-size:12px!important;font-weight:600!important;color:#b8b8bd!important}
+.theme-dark :is(.page-intro>div>span,.concepts-head p){font-size:13px!important;color:#828289!important}
+.theme-dark :is(.today,.d1-sync-button,.header-user-trigger){font-size:13px!important}
+.theme-dark .primary-button,.theme-dark .secondary-button{font-size:13px!important;font-weight:600!important}
+
+/* Flat cards and dense KPI hierarchy */
+.theme-dark :is(.surface,.stat-card,.analytics-chart-card,.breakdown-chart-card,.chart-shell,.chart-card,.concept-card,.concept-view-section){background:#0f0f11!important;border:1px solid #25252a!important;outline:0!important;border-radius:12px!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.theme-dark :is(.surface,.stat-card):hover{border-color:#313137!important;box-shadow:none!important}
+.theme-dark .stats-grid{gap:14px!important}
+.theme-dark .stat-card{min-height:140px!important;padding:19px 20px!important}
+.theme-dark .stat-card>div>span{font-size:13px!important;font-weight:500!important;color:#85858d!important}
+.theme-dark .stat-card>strong{margin:19px 0 4px!important;font-size:30px!important;font-weight:650!important;letter-spacing:-.045em!important;color:#f3f3f4!important}
+.theme-dark .stat-card>small{font-size:12px!important;color:#77777f!important}
+.theme-dark .stat-card i{width:30px!important;height:30px!important;border-radius:8px!important}
+.theme-dark .stat-card i.violet,.theme-dark .stat-card i.blue{background:#151925!important;color:#5180f5!important}
+.theme-dark .stat-card i.green{background:#10251b!important;color:#2bd67b!important}
+.theme-dark .stat-card i.red{background:#291519!important;color:#ff6973!important}
+.theme-dark .analytics-metrics article{padding:17px!important}
+.theme-dark .analytics-metrics span{font-size:11px!important;color:#85858d!important}
+.theme-dark .analytics-metrics b{font-size:24px!important;font-weight:650!important}
+.theme-dark .positive{color:#2bd67b!important}.theme-dark .negative{color:#ff6973!important}.theme-dark .neutral-value{color:#f3f3f4!important}
+
+/* Controls, forms, tables and calendar */
+.theme-dark :is(.today,.round-button,.d1-sync-button,.header-user-trigger,.secondary-button,.image-picker-button,.sidebar-toggle){background:#111114!important;border:1px solid #29292e!important;color:#b7b7bd!important;box-shadow:none!important;backdrop-filter:none!important}
+.theme-dark :is(.today,.round-button,.d1-sync-button,.header-user-trigger,.secondary-button,.image-picker-button,.sidebar-toggle):hover{transform:none!important;background:#18181b!important;border-color:#3a3a40!important;color:#fff!important;box-shadow:none!important}
+.theme-dark :is(.field-label input,.field-label select,.field-label textarea,.number-field,.readonly-field,.flow-layer-step input,.flow-layer-step select,.search-box){background:#0b0b0d!important;border-color:#2a2a2f!important;color:#f1f1f3!important;box-shadow:none!important;backdrop-filter:none!important;font-size:14px!important}
+.theme-dark :is(.field-label input,.field-label select,.field-label textarea,.number-field,.flow-layer-step input,.flow-layer-step select,.search-box):focus,.theme-dark .number-field:focus-within{border-color:#4a4a51!important;box-shadow:0 0 0 3px rgba(255,255,255,.045)!important}
+.theme-dark .field-label>span{font-size:12px!important;color:#8b8b92!important}
+.theme-dark table th{font-size:10px!important;color:#727279!important;font-weight:600!important;letter-spacing:.7px!important}
+.theme-dark table td{font-size:13px!important;color:#b5b5bb!important;border-color:#222226!important}
+.theme-dark table tbody tr:hover{background:#141416!important}
+.theme-dark .grade{background:#18181b!important;color:#bdbdc2!important}
+.theme-dark .calendar-day,.theme-dark .calendar-days>div{background:#0d0d0f!important;border-color:#232328!important;color:#8b8b92!important}
+.theme-dark .calendar-day:hover{background:#151518!important;border-color:#3b3b42!important;box-shadow:none!important}
+.theme-dark .calendar-day.today-date{background:#17171a!important;border-color:#46464d!important}
+.theme-dark .today-marker,.theme-dark .calendar-day>mark{background:#202024!important;border-color:#303036!important;color:#d4d4d7!important}
+.theme-dark .calendar-day b{font-size:13px!important}.theme-dark .calendar-day small,.theme-dark .calendar-day em{font-size:10px!important}
+
+/* Quiet internal surfaces, menus and overlays */
+.theme-dark :is(.control-readiness,.risk-usage article,.journal-form-section,.playbook-definition,.image-uploader,.day-memory-section,.concept-view-section,.playbook-timeframe-section,.flow-editor,.flow-preview,.flow-layer-steps,.flow-timeframe-evidence){background:#0b0b0d!important;border-color:#242429!important}
+.theme-dark .risk-usage article>i{background:#202024!important}
+.theme-dark .risk-usage article>i>u{background:#2bd67b!important}
+.theme-dark .guard-action{background:#17171a!important;border-color:#313137!important;color:#ededee!important}
+.theme-dark :is(.header-profile-menu,.account-menu,.profile-menu){background:#0d0d0f!important;border-color:#29292e!important;box-shadow:0 24px 70px rgba(0,0,0,.55)!important}
+.theme-dark :is(.modal-panel,.modal-drawer,.modal-fullscreen,.journal-day-panel){background:#0b0b0d!important;border-color:#29292e!important;box-shadow:-24px 0 80px rgba(0,0,0,.56)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.theme-dark :is(.modal-heading,.modal-footer){background:#0d0d0f!important;border-color:#25252a!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.theme-dark .modal-heading h2{font-size:24px!important;font-weight:650!important}
+.theme-dark .concept-card-body h3{font-size:18px!important}.theme-dark .concept-card-body p,.theme-dark .concept-view-body{font-size:13px!important}
+
+/* Banners become restrained account-summary panels. */
+.theme-dark .command-banner{background:#0f0f11!important;border:1px solid #29292e!important;color:#f3f3f4!important;border-radius:12px!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.theme-dark .command-banner:before,.theme-dark .command-banner:after{border-color:rgba(255,255,255,.035)!important}
+.theme-dark .command-side{border-color:#29292e!important}
+.theme-dark .command-side span,.theme-dark .command-side small,.theme-dark .command-banner>div>p{color:#7d7d84!important}
+.theme-dark .command-side b{font-size:20px!important;color:#f3f3f4!important}
+.theme-dark .command-side button{background:#17171a!important;border-color:#323238!important;color:#ededee!important}
+.theme-dark .command-side button:hover{background:#202024!important}
+
+/* Keep the global trade action compact and clearly actionable. */
+.theme-dark.app-shell .topbar .trade-button{background:#2f6df6!important;border-color:#4a7df4!important;color:#fff!important;box-shadow:none!important}
+.theme-dark.app-shell .topbar .trade-button:hover:not(:disabled){background:#417af5!important;box-shadow:none!important}
+.theme-dark .header-theme-option>i.on{background:#2f6df6!important}
+.theme-dark ::selection{background:#315fae!important;color:#fff!important}
+
+/* Concepts drawer: scroll content independently and keep actions inside the viewport. */
+.modal-drawer.concept-editor-drawer>.concept-form,
+.modal-drawer.concept-view-drawer>.concept-view-content{
+  display:flex!important;
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  flex-direction:column!important;
+  gap:0!important;
+  padding:0!important;
+}
+.concept-form-scroll,.concept-view-scroll{
+  display:grid;
+  flex:1 1 auto;
+  min-height:0;
+  align-content:start;
+  gap:18px;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:20px 22px 30px;
+  scrollbar-gutter:stable;
+}
+.concept-view-scroll{gap:14px}
+.modal-drawer.concept-editor-drawer>.concept-form>.modal-footer,
+.modal-drawer.concept-view-drawer>.concept-view-content>.modal-footer{
+  position:relative!important;
+  inset:auto!important;
+  z-index:4!important;
+  flex:0 0 auto!important;
+  min-height:68px!important;
+  margin:0!important;
+  padding:12px 22px calc(12px + env(safe-area-inset-bottom))!important;
+  border-top:1px solid var(--line)!important;
+  background:var(--surface)!important;
+  box-shadow:0 -12px 30px rgba(0,0,0,.16)!important;
+}
+.modal-drawer.concept-editor-drawer>.concept-form>.modal-footer>button,
+.modal-drawer.concept-view-drawer>.concept-view-content>.modal-footer>button{min-height:40px!important}
+.theme-dark .modal-drawer.concept-editor-drawer>.concept-form>.modal-footer,
+.theme-dark .modal-drawer.concept-view-drawer>.concept-view-content>.modal-footer{background:#0d0d0f!important;border-color:#25252a!important}
+@media(max-width:560px){
+  .concept-form-scroll,.concept-view-scroll{padding:16px 16px 24px}
+  .modal-drawer.concept-editor-drawer>.concept-form>.modal-footer,
+  .modal-drawer.concept-view-drawer>.concept-view-content>.modal-footer{padding:11px 16px calc(11px + env(safe-area-inset-bottom))!important}
+}
